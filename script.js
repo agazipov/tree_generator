@@ -8,7 +8,7 @@ const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Conteiner {
-    constructor(x, y, level, position, id) {
+    constructor(x, y, level, id, parentId) {
         this.width = 20;
         this.height = 20;
         this.x = x;
@@ -16,9 +16,9 @@ class Conteiner {
         this.isDrag = false;
         this.isActiv = false;
         this.level = level;
-        this.position = position;
         this.child = [];
         this.id = id;
+        this.parentId = parentId;
     }
 };
 class Entiti {
@@ -28,11 +28,12 @@ class Entiti {
     }
 };
 
-const root = new Conteiner(250, 20, 1, { parPos: 1, myChildPos: 1, myGlobalPos: 1 }, nanoid());
+const root = new Conteiner(250, 20, 1, nanoid(), null);
 
-const containers = [root];
+const containers = [[root]];
+let activContainersIndex = 0;
+let activLocalIndex = 0;
 let activContainer = root;
-let idFistChild = null;
 let map = [new Entiti(1, 1)];
 
 function createNewConteiner(parent) {
@@ -45,46 +46,40 @@ function createNewConteiner(parent) {
     };
 
     // генерация полей нового контейнера
-    let x, y, level, position, childId;
+    let x, y, level, parentId, childId;
     childId = nanoid();
     parent.child.push(childId); // добавляем ид дочернего в родителя
     x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
-    position = {
-        parPos: parent.position.myGlobalPos, // позиция родителя на своем уровне
-        myChildPos: parent.child.indexOf(childId) + 1, // моч позиция как ребенка
-        quantityChild: parent.child.length + 1, // колво детей в родителе
-        myGlobalPos: map[parent.level].collumn // моя глобальная позиция на уровне
-    };
-    // position = map[parent.level].collumn;
-    return new Conteiner(x, y, level, position, childId);
+
+    parentId = parent.id
+
+    return new Conteiner(x, y, level, childId, parentId);
 }
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
-    let activLevelCol = map[activContainer.level - 1].collumn;
+    // let activLevelCol = map[activContainer.level - 1].collumn;
     let obj = createNewConteiner(activContainer);
-    if (!idFistChild) {
-        containers.push(obj);
-        containers.forEach((container, index) => {
-            if (container.level === activContainer.level + 1) {
-                container.x = ((rect.width / (1+ map[activContainer.level].collumn)) * container.position.myGlobalPos) - 25;
-            };
-        })
-    } else {
-        console.log(`test`);
-        let index = containers.findIndex(({ id }) => id === idFistChild);
-        containers.splice(index, 0, obj);
+    if (containers.length === activContainersIndex + 1) {
+        containers.push(new Array({ ...obj, localIndex: containers[activContainersIndex][activLocalIndex].localIndex }));
+        // containers[activContainersIndex][0].parentIndex = activLocalIndex;
 
-        containers.forEach((container, index) => {
-            if (container.level === activContainer.level + 1) {
-                container.x = ((rect.width / (1 + map[activContainer.level].collumn)) * (index - activLevelCol)) - 25;
-            };
+        containers[activContainersIndex + 1].forEach((container, index) => {
+            container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
+        });
+    } else {
+        containers[activContainersIndex + 1].push(obj);
+
+        // let index = containers.findIndex(({ id }) => id === idFistChild);
+        // containers.splice(index, 0, obj);
+
+        containers[activContainersIndex + 1].forEach((container, index) => {
+            container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
         });
     };
-
-    // console.log(containers.indexOf(obj));
+    console.log(containers);
     draw();
 });
 
@@ -104,73 +99,60 @@ canvas.addEventListener("click", (event) => {
     const clickY = event.clientY - rect.top;
 
     // Проверяем объекты на пересечение с кликом
-    containers.forEach((object) => {
-        if (
-            clickX >= object.x &&
-            clickX <= object.x + object.width &&
-            clickY >= object.y &&
-            clickY <= object.y + object.height
-        ) {
-            // Обработка клика на объекте
-            object.isActiv ? (object.isActiv = false, activContainer = null) : (object.isActiv = true, activContainer = object);
-            idFistChild = object.child[0];
-            console.log('idFistChild', idFistChild);
-        } else {
-            object.isActiv = false;
-        };
+    containers.forEach((arr, index) => {
+        arr.forEach((object, indexLocal) => {
+            if (
+                clickX >= object.x &&
+                clickX <= object.x + object.width &&
+                clickY >= object.y &&
+                clickY <= object.y + object.height
+            ) {
+                // Обработка клика на объекте
+                object.isActiv ?
+                    (object.isActiv = false, activContainer = null)
+                    :
+                    (object.isActiv = true, activContainer = object);
+                activContainersIndex = index; // добавить в свойство объекта
+                activLocalIndex = indexLocal;
+                console.log('activContainersIndex', activContainersIndex);
+            } else {
+                object.isActiv = false;
+            };
+        })
     });
     draw();
 });
 
-// canvas.addEventListener("mousedown", (event) => {
-//     console.log(event);
-//     containers[0].isDrag = true;
-// });
-// canvas.addEventListener("mousemove", (event) => {
-//     if (containers[0].isDrag) {
-//         containers[0].x = event.clientX - rect.left - containers[0].width / 2;
-//         containers[0].y = event.clientY - rect.top - containers[0].height / 2;
-//         draw();
-//     }
-// });
-// canvas.addEventListener("mouseup", () => {
-//     containers[0].isDrag = false;
-// });
-
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
 
-    containers.forEach((container) => {
-        container.isActiv ? ctx.fillStyle = "blue" : ctx.fillStyle = 'red';
-        ctx.fillRect(container.x, container.y, container.width, container.height);
+    containers.forEach((arr) => {
+        arr.forEach((container) => {
+            container.isActiv ? ctx.fillStyle = "blue" : ctx.fillStyle = 'red';
+            ctx.fillRect(container.x, container.y, container.width, container.height);
+        })
     });
 
-    containers.forEach((container) => {
-        const obj1 = container;
 
-        container.child.forEach((childId) => {
-            const findContainer = containers.find((container) => container.id === childId);
-            if (findContainer) {
+    containers.forEach((arr, index) => {
+        arr.forEach(container => {
+            const obj1 = container;
+                container.child.forEach((childId) => {
+                const findContainer = containers[index + 1].find((container) => container.id === childId);
+                if (findContainer) {
+    
+                    ctx.beginPath();
+                    ctx.moveTo(obj1.x + 10, obj1.y + 10);
+                    ctx.lineTo(findContainer.x + 10, findContainer.y + 10);
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            });
 
-                // ctx.fillRect(findContainer.x, findContainer.y, findContainer.width, findContainer.height);
-
-                ctx.beginPath();
-                ctx.moveTo(obj1.x + 10, obj1.y + 10);
-                ctx.lineTo(findContainer.x + 10, findContainer.y + 10);
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.closePath();
-            }
         })
-
-    })
+    });
 };
 
 draw();
-
-    // разбивка по ширине старая
-    // let partWidth = rect.width / (map[activContainer.level - 1].collumn);
-    // let elementWidth = partWidth / (1 + map[activContainer.level].collumn);
-
-    // container.x = ((elementWidth * container.position.myChildPos) * container.position.parPos);
