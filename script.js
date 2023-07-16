@@ -8,17 +8,19 @@ const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Conteiner {
-    constructor(x, y, level, id, parentId) {
+    constructor(x, y, level, id, parentId, parentIndex) {
         this.width = 20;
         this.height = 20;
         this.x = x;
         this.y = y;
+        this.id = id;
         this.isDrag = false;
         this.isActiv = false;
         this.level = level;
         this.child = [];
-        this.id = id;
         this.parentId = parentId;
+        this.index = 0;
+        this.parentIndex = parentIndex;
     }
 };
 class Entiti {
@@ -28,7 +30,7 @@ class Entiti {
     }
 };
 
-const root = new Conteiner(250, 20, 1, nanoid(), null);
+const root = new Conteiner(250, 20, 1, nanoid(), null, null);
 
 const containers = [[root]];
 let activContainersIndex = 0;
@@ -46,7 +48,7 @@ function createNewConteiner(parent) {
     };
 
     // генерация полей нового контейнера
-    let x, y, level, parentId, childId;
+    let x, y, level, parentId, childId, parentIndex;
     childId = nanoid();
     parent.child.push(childId); // добавляем ид дочернего в родителя
     x = 75;
@@ -54,8 +56,9 @@ function createNewConteiner(parent) {
     level = parent.level + 1;
 
     parentId = parent.id
+    parentIndex = parent.index;
 
-    return new Conteiner(x, y, level, childId, parentId);
+    return new Conteiner(x, y, level, childId, parentId, parentIndex);
 }
 
 // добавить ребенка
@@ -63,14 +66,24 @@ buttonChild.addEventListener("click", () => {
     // let activLevelCol = map[activContainer.level - 1].collumn;
     let obj = createNewConteiner(activContainer);
     if (containers.length === activContainersIndex + 1) {
-        containers.push(new Array({ ...obj, localIndex: containers[activContainersIndex][activLocalIndex].localIndex }));
-        // containers[activContainersIndex][0].parentIndex = activLocalIndex;
+        containers.push(new Array(obj));
+        let index = containers[activContainersIndex + 1].indexOf(obj);
+        containers[activContainersIndex + 1][index].index = index;
 
         containers[activContainersIndex + 1].forEach((container, index) => {
             container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
         });
     } else {
         containers[activContainersIndex + 1].push(obj);
+
+        let index = containers[activContainersIndex + 1].indexOf(obj);
+        containers[activContainersIndex + 1][index].index = index;
+
+        containers[activContainersIndex + 1].sort((a, b) => {
+            if (a.parentIndex > b.parentIndex) { return 1; }
+            if (a.parentIndex < b.parentIndex) { return -1; }
+            return 0;
+        })
 
         // let index = containers.findIndex(({ id }) => id === idFistChild);
         // containers.splice(index, 0, obj);
@@ -80,6 +93,7 @@ buttonChild.addEventListener("click", () => {
         });
     };
     console.log(containers);
+    // console.log('activContainer', activContainer);
     draw();
 });
 
@@ -137,10 +151,10 @@ function draw() {
     containers.forEach((arr, index) => {
         arr.forEach(container => {
             const obj1 = container;
-                container.child.forEach((childId) => {
+            container.child.forEach((childId) => {
                 const findContainer = containers[index + 1].find((container) => container.id === childId);
                 if (findContainer) {
-    
+
                     ctx.beginPath();
                     ctx.moveTo(obj1.x + 10, obj1.y + 10);
                     ctx.lineTo(findContainer.x + 10, findContainer.y + 10);
