@@ -48,7 +48,7 @@ function createNewConteiner(parent) {
     let x, y, level, position, childId;
     childId = nanoid();
     parent.child.push(childId); // добавляем ид дочернего в родителя
-    x = 75 * map[parent.level].collumn;
+    x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
     position = {
@@ -63,26 +63,28 @@ function createNewConteiner(parent) {
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
+    let activLevelCol = map[activContainer.level - 1].collumn;
     let obj = createNewConteiner(activContainer);
     if (!idFistChild) {
         containers.push(obj);
+        containers.forEach((container, index) => {
+            if (container.level === activContainer.level + 1) {
+                container.x = ((rect.width / (1+ map[activContainer.level].collumn)) * container.position.myGlobalPos) - 25;
+            };
+        })
     } else {
+        console.log(`test`);
         let index = containers.findIndex(({ id }) => id === idFistChild);
         containers.splice(index, 0, obj);
-    }
-    
-    console.log(containers);
-    // растягиваю по ширине. меняет позиции элементов которые ниже активного
-    containers.forEach((container) => {
-        if (container.level === activContainer.level + 1) {
-            // let partWidth = rect.width / (map[activContainer.level - 1].collumn);
-            // let elementWidth = partWidth / (1 + map[activContainer.level].collumn);
 
-            // container.x = ((elementWidth * container.position.myChildPos) * container.position.parPos);
+        containers.forEach((container, index) => {
+            if (container.level === activContainer.level + 1) {
+                container.x = ((rect.width / (1 + map[activContainer.level].collumn)) * (index - activLevelCol)) - 25;
+            };
+        });
+    };
 
-            container.x = ((rect.width / (1 + map[activContainer.level].collumn)) * container.position.myGlobalPos) - 25;
-        };
-    })
+    // console.log(containers.indexOf(obj));
     draw();
 });
 
@@ -111,7 +113,8 @@ canvas.addEventListener("click", (event) => {
         ) {
             // Обработка клика на объекте
             object.isActiv ? (object.isActiv = false, activContainer = null) : (object.isActiv = true, activContainer = object);
-            idFistChild = object.child[0]
+            idFistChild = object.child[0];
+            console.log('idFistChild', idFistChild);
         } else {
             object.isActiv = false;
         };
@@ -165,3 +168,9 @@ function draw() {
 };
 
 draw();
+
+    // разбивка по ширине старая
+    // let partWidth = rect.width / (map[activContainer.level - 1].collumn);
+    // let elementWidth = partWidth / (1 + map[activContainer.level].collumn);
+
+    // container.x = ((elementWidth * container.position.myChildPos) * container.position.parPos);
