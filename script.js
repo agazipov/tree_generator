@@ -30,7 +30,7 @@ class Entiti {
     }
 };
 
-const root = new Conteiner(250, 20, 1, nanoid(), null, null);
+const root = new Conteiner(250, 20, 1, nanoid(), null, 0);
 
 const containers = [[root]];
 let activContainersIndex = 0;
@@ -67,30 +67,36 @@ buttonChild.addEventListener("click", () => {
     let obj = createNewConteiner(activContainer);
     if (containers.length === activContainersIndex + 1) {
         containers.push(new Array(obj));
-        let index = containers[activContainersIndex + 1].indexOf(obj);
-        containers[activContainersIndex + 1][index].index = index;
 
-        containers[activContainersIndex + 1].forEach((container, index) => {
-            container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
-        });
+        // let index = containers[activContainersIndex + 1].indexOf(obj);
+        // containers[activContainersIndex + 1][index].index = index;
+
+        // containers[activContainersIndex + 1].forEach((container, index) => {
+        //     container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
+        // });
     } else {
         containers[activContainersIndex + 1].push(obj);
 
-        let index = containers[activContainersIndex + 1].indexOf(obj);
-        containers[activContainersIndex + 1][index].index = index;
+        // let index = containers[activContainersIndex + 1].length - 1;
+        // containers[activContainersIndex + 1][index].index = index;
 
-        containers[activContainersIndex + 1].sort((a, b) => {
-            if (a.parentIndex > b.parentIndex) { return 1; }
-            if (a.parentIndex < b.parentIndex) { return -1; }
-            return 0;
+        containers.forEach((element) => {
+            element.sort((a, b) => {
+                if (a.parentIndex > b.parentIndex) { return 1; }
+                if (a.parentIndex < b.parentIndex) { return -1; }
+                return 0;
+            })
+
+            // containers[activContainersIndex + 1].forEach((element, index) => {
+            //     element.index = index;
+            // })
+
+            element.forEach((container, index) => {
+                container.index = index;
+                container.parentIndex = index;
+                container.x = ((rect.width / element.length) * (index)) + 25;
+            });
         })
-
-        // let index = containers.findIndex(({ id }) => id === idFistChild);
-        // containers.splice(index, 0, obj);
-
-        containers[activContainersIndex + 1].forEach((container, index) => {
-            container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
-        });
     };
     console.log(containers);
     // console.log('activContainer', activContainer);
@@ -128,7 +134,6 @@ canvas.addEventListener("click", (event) => {
                     (object.isActiv = true, activContainer = object);
                 activContainersIndex = index; // добавить в свойство объекта
                 activLocalIndex = indexLocal;
-                console.log('activContainersIndex', activContainersIndex);
             } else {
                 object.isActiv = false;
             };
@@ -140,16 +145,20 @@ canvas.addEventListener("click", (event) => {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
 
-    containers.forEach((arr) => {
-        arr.forEach((container) => {
-            container.isActiv ? ctx.fillStyle = "blue" : ctx.fillStyle = 'red';
-            ctx.fillRect(container.x, container.y, container.width, container.height);
-        })
-    });
+    // containers.forEach((arr) => {
+    //     arr.forEach((container) => {
+    //         ctx.fillRect(container.x, container.y, container.width, container.height);
+    //     })
+    // });
 
 
     containers.forEach((arr, index) => {
         arr.forEach(container => {
+            container.isActiv ? ctx.fillStyle = "red" : ctx.fillStyle = 'blue';
+            ctx.fillRect(container.x, container.y, container.width, container.height);
+            ctx.fillText("index " + container.index.toString(), container.x, container.y - 5);
+            ctx.fillText("parIndex " + container.parentIndex.toString(), container.x, container.y + 30);
+
             const obj1 = container;
             container.child.forEach((childId) => {
                 const findContainer = containers[index + 1].find((container) => container.id === childId);
