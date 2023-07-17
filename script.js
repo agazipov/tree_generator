@@ -23,44 +23,29 @@ class Conteiner {
         this.parentIndex = parentIndex;
     }
 };
-class Entiti {
-    constructor(level, collumn) {
-        this.level = level;
-        this.collumn = collumn;
-    }
-};
 
 const root = new Conteiner(25, 20, 1, nanoid(), 0, 0);
 
 const containers = [[root]];
-let activContainersIndex = 0;
-let activLocalIndex = 0;
-let activContainer = root;
-let map = [new Entiti(1, 1)];
+let activContainersIndex = 0; // индекс актвного контейнера в общем массиве 
+let activContainer = root; // храним активный контенер
 
+// генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewConteiner(parent) {
-    // от количества детей отца менять позицию чилдрена
-    // запись в мап
-    if (!map.some((element) => element.level === parent.level + 1)) {
-        map.push(new Entiti(parent.level + 1, 1));
-    } else {
-        map[parent.level].collumn += 1;
-    };
 
-    // генерация полей нового контейнера
-    let x, y, level, parentId, childId, parentIndex;
+    let x, y, level,  childId, parentId, parentIndex;
     childId = nanoid();
     parent.child.push(childId); // добавляем ид дочернего в родителя
     x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
-
     parentId = parent.id
     parentIndex = parent.index;
 
     return new Conteiner(x, y, level, childId, parentId, parentIndex);
 };
 
+// поиск родителя по его айди
 function serchId(id, arr) {
     let value;
     arr.find((subArr) => {
@@ -72,44 +57,29 @@ function serchId(id, arr) {
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
-    // let activLevelCol = map[activContainer.level - 1].collumn;
     let obj = createNewConteiner(activContainer);
+
     if (containers.length === activContainersIndex + 1) {
         containers.push(new Array(obj));
-
-        // let index = containers[activContainersIndex + 1].indexOf(obj);
-        // containers[activContainersIndex + 1][index].index = index;
-
-        // containers[activContainersIndex + 1].forEach((container, index) => {
-        //     container.x = ((rect.width / containers[activContainersIndex + 1].length) * (index)) + 25;
-        // });
     } else {
         containers[activContainersIndex + 1].push(obj);
 
-        // let index = containers[activContainersIndex + 1].length - 1;
-        // containers[activContainersIndex + 1][index].index = index;
-
-        containers.forEach((element, index, arr) => {
+        containers.forEach((element, _index, arr) => {
             element.sort((a, b) => {
                 if (a.parentIndex > b.parentIndex) { return 1; }
                 if (a.parentIndex < b.parentIndex) { return -1; }
                 return 0;
             })
 
-            // containers[activContainersIndex + 1].forEach((element, index) => {
-            //     element.index = index;
-            // })
-
             element.forEach((container, index) => {
                 container.index = index;
                 container.parentIndex = serchId(container.parentId, arr);
-                console.log(serchId(container.parentId, arr)); 
                 container.x = ((rect.width / element.length) * (index)) + 25;
             });
         })
     };
     // console.log(containers);
-    // console.log('activContainer', activContainer);
+    // console.log('activContainer', activContainer.index);
     draw();
 });
 
@@ -142,42 +112,36 @@ canvas.addEventListener("click", (event) => {
                     (object.isActiv = false, activContainer = null)
                     :
                     (object.isActiv = true, activContainer = object);
-                activContainersIndex = index; // добавить в свойство объекта
-                activLocalIndex = indexLocal;
+                activContainersIndex = index; // добавить в свойство объекта*
             } else {
                 object.isActiv = false;
             };
         })
     });
-    console.log('activContainer', activContainer);
-
+    // console.log('activContainer', activContainer);
     draw();
 });
 
+// функция рисования
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
 
-    // containers.forEach((arr) => {
-    //     arr.forEach((container) => {
-    //         ctx.fillRect(container.x, container.y, container.width, container.height);
-    //     })
-    // });
-
-
     containers.forEach((arr, index) => {
         arr.forEach(container => {
+            // отрисовываем контейнеры
             container.isActiv ? ctx.fillStyle = "red" : ctx.fillStyle = 'blue';
             ctx.fillRect(container.x, container.y, container.width, container.height);
             ctx.fillText("index " + container.index.toString(), container.x, container.y - 5);
             ctx.fillText("parIndex " + container.parentIndex.toString(), container.x, container.y + 30);
 
-            const obj1 = container;
+            // отрисовываем линии
             container.child.forEach((childId) => {
+                // поиск дочерних у родителя на нижнем уровне
                 const findContainer = containers[index + 1].find((container) => container.id === childId);
                 if (findContainer) {
 
                     ctx.beginPath();
-                    ctx.moveTo(obj1.x + 10, obj1.y + 10);
+                    ctx.moveTo(container.x + 10, container.y + 10);
                     ctx.lineTo(findContainer.x + 10, findContainer.y + 10);
                     ctx.strokeStyle = 'black';
                     ctx.lineWidth = 2;
