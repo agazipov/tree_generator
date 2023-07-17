@@ -30,7 +30,7 @@ class Entiti {
     }
 };
 
-const root = new Conteiner(250, 20, 1, nanoid(), null, 0);
+const root = new Conteiner(25, 20, 1, nanoid(), 0, 0);
 
 const containers = [[root]];
 let activContainersIndex = 0;
@@ -59,7 +59,16 @@ function createNewConteiner(parent) {
     parentIndex = parent.index;
 
     return new Conteiner(x, y, level, childId, parentId, parentIndex);
-}
+};
+
+function serchId(id, arr) {
+    let value;
+    arr.find((subArr) => {
+        subArr.find((container) => {if (container.id === id) value = container});
+    });
+    return value ? value.index : 0;
+};
+
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
@@ -80,7 +89,7 @@ buttonChild.addEventListener("click", () => {
         // let index = containers[activContainersIndex + 1].length - 1;
         // containers[activContainersIndex + 1][index].index = index;
 
-        containers.forEach((element) => {
+        containers.forEach((element, index, arr) => {
             element.sort((a, b) => {
                 if (a.parentIndex > b.parentIndex) { return 1; }
                 if (a.parentIndex < b.parentIndex) { return -1; }
@@ -93,12 +102,13 @@ buttonChild.addEventListener("click", () => {
 
             element.forEach((container, index) => {
                 container.index = index;
-                container.parentIndex = index;
+                container.parentIndex = serchId(container.parentId, arr);
+                console.log(serchId(container.parentId, arr)); 
                 container.x = ((rect.width / element.length) * (index)) + 25;
             });
         })
     };
-    console.log(containers);
+    // console.log(containers);
     // console.log('activContainer', activContainer);
     draw();
 });
@@ -139,6 +149,8 @@ canvas.addEventListener("click", (event) => {
             };
         })
     });
+    console.log('activContainer', activContainer);
+
     draw();
 });
 
