@@ -8,14 +8,14 @@ const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Conteiner {
-    constructor(x, y, level, id, parentId, parentIndex) {
+    constructor(x, y, level, id, isActiv, parentId, parentIndex) {
         this.width = 20;
         this.height = 20;
         this.x = x;
         this.y = y;
         this.id = id;
         this.isDrag = false;
-        this.isActiv = false;
+        this.isActiv = isActiv;
         this.level = level;
         this.child = [];
         this.parentId = parentId;
@@ -24,72 +24,76 @@ class Conteiner {
     }
 };
 
-const root = new Conteiner(25, 20, 1, nanoid(), 0, 0);
+const root = new Conteiner(25, 20, 1, nanoid(), true, null, 0);
 
 const containers = [[root]];
 let activContainersIndex = 0; // индекс актвного контейнера в общем массиве 
-let activContainer = root; // храним активный контенер
 
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewConteiner(parent) {
-
-    let x, y, level,  childId, parentId, parentIndex;
-    childId = nanoid();
-    parent.child.push(childId); // добавляем ид дочернего в родителя
+    let x, y, level, id, isActiv, parentId, parentIndex;
+    id = nanoid();
+    parent.child.push(id); // добавляем ид дочернего в родителя
     x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
     parentId = parent.id
     parentIndex = parent.index;
+    isActiv = false;
 
-    return new Conteiner(x, y, level, childId, parentId, parentIndex);
+    return new Conteiner(x, y, level, id, isActiv, parentId, parentIndex);
 };
 
-// поиск родителя по его айди
-function serchId(id, arr) {
+// поиск контейнера по заданным параметрам
+function serchParam(param, arr, property) {
     let value;
     arr.find((subArr) => {
-        subArr.find((container) => {if (container.id === id) value = container});
+        subArr.find((container) => { if (container?.[property] === param) value = container });
     });
-    return value ? value.index : 0;
+    return value;
 };
 
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
+    let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер
+    if (!activContainer) {
+        console.log(`Нет активного контейнера`);
+        return;
+    }
     let obj = createNewConteiner(activContainer);
 
-    if (containers.length === activContainersIndex + 1) {
+    if (containers.length === activContainersIndex + 1) { // если первый контейнер на уровне
         containers.push(new Array(obj));
     } else {
         containers[activContainersIndex + 1].push(obj);
 
         containers.forEach((element, _index, arr) => {
+            // сортировка контейнеров на своем уровне по родительскому индексу
             element.sort((a, b) => {
                 if (a.parentIndex > b.parentIndex) { return 1; }
                 if (a.parentIndex < b.parentIndex) { return -1; }
                 return 0;
             })
 
+            // переназначение параметров контейнера после добавления нового элемента
             element.forEach((container, index) => {
-                container.index = index;
-                container.parentIndex = serchId(container.parentId, arr);
-                container.x = ((rect.width / element.length) * (index)) + 25;
+                container.index = index; // текущий индекс на уровне
+                container.parentIndex = serchParam(container.parentId, arr, 'id') ? serchParam(container.parentId, arr, 'id').index : 0; // проверка актуального родительского индекса
+                container.x = ((rect.width / element.length) * (index)) + 25; // растягивание по ширене уровня
             });
         })
     };
     // console.log(containers);
-    // console.log('activContainer', activContainer.index);
     draw();
 });
 
 // очистка
 buttonClear.addEventListener("click", () => {
-    level = 0;
-    col = 0;
-    containers.length = 1;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillRect(containers[0].x, containers[0].y, containers[0].width, containers[0].height);
+    containers.length = 0;
+    containers.push([new Conteiner(25, 20, 1, nanoid(), true, null, 0)]);
+    activContainersIndex = 0;
+    draw();
 });
 
 // активная кнопка
@@ -100,7 +104,7 @@ canvas.addEventListener("click", (event) => {
 
     // Проверяем объекты на пересечение с кликом
     containers.forEach((arr, index) => {
-        arr.forEach((object, indexLocal) => {
+        arr.forEach((object) => {
             if (
                 clickX >= object.x &&
                 clickX <= object.x + object.width &&
@@ -108,17 +112,13 @@ canvas.addEventListener("click", (event) => {
                 clickY <= object.y + object.height
             ) {
                 // Обработка клика на объекте
-                object.isActiv ?
-                    (object.isActiv = false, activContainer = null)
-                    :
-                    (object.isActiv = true, activContainer = object);
+                object.isActiv ? object.isActiv = false : object.isActiv = true; // при повторном клике
                 activContainersIndex = index; // добавить в свойство объекта*
             } else {
                 object.isActiv = false;
             };
         })
     });
-    // console.log('activContainer', activContainer);
     draw();
 });
 
@@ -137,7 +137,7 @@ function draw() {
             // отрисовываем линии
             container.child.forEach((childId) => {
                 // поиск дочерних у родителя на нижнем уровне
-                const findContainer = containers[index + 1].find((container) => container.id === childId);
+                const findContainer = containers[index + 1] ? containers[index + 1].find((container) => container.id === childId) : null;
                 if (findContainer) {
 
                     ctx.beginPath();
