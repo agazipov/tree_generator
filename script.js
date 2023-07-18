@@ -1,7 +1,7 @@
 let nanoid = (t = 21) => crypto.getRandomValues(new Uint8Array(t)).reduce(((t, e) => t += (e &= 63) < 36 ? e.toString(36) : e < 62 ? (e - 26).toString(36).toUpperCase() : e > 62 ? "-" : "_"), "");
 
 const buttonChild = document.getElementById("addChild");
-const buttonSibling = document.getElementById("addSibling");
+const buttonDelite = document.getElementById("delContainer");
 const buttonClear = document.getElementById("clear");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
@@ -48,9 +48,30 @@ function createNewConteiner(parent) {
 function serchParam(param, arr, property) {
     let value;
     arr.find((subArr) => {
-        subArr.find((container) => { if (container?.[property] === param) value = container });
+        subArr.find((container) => { 
+            if (container?.[property] === param) value = container;
+        });
     });
     return value;
+};
+
+// сортировка массива
+function sortContainers(arr) {
+    arr.forEach((element, _index, arr) => {
+        // сортировка контейнеров на своем уровне по родительскому индексу
+        element.sort((a, b) => {
+            if (a.parentIndex > b.parentIndex) { return 1; }
+            if (a.parentIndex < b.parentIndex) { return -1; }
+            return 0;
+        })
+
+        // переназначение параметров контейнера после добавления нового элемента
+        element.forEach((container, index) => {
+            container.index = index; // текущий индекс на уровне
+            container.parentIndex = serchParam(container.parentId, arr, 'id') ? serchParam(container.parentId, arr, 'id').index : 0; // проверка актуального родительского индекса
+            container.x = ((rect.width / element.length) * (index)) + 25; // растягивание по ширене уровня
+        })
+    });
 };
 
 
@@ -60,31 +81,35 @@ buttonChild.addEventListener("click", () => {
     if (!activContainer) {
         console.log(`Нет активного контейнера`);
         return;
-    }
+    };
     let obj = createNewConteiner(activContainer);
 
     if (containers.length === activContainersIndex + 1) { // если первый контейнер на уровне
         containers.push(new Array(obj));
     } else {
         containers[activContainersIndex + 1].push(obj);
-
-        containers.forEach((element, _index, arr) => {
-            // сортировка контейнеров на своем уровне по родительскому индексу
-            element.sort((a, b) => {
-                if (a.parentIndex > b.parentIndex) { return 1; }
-                if (a.parentIndex < b.parentIndex) { return -1; }
-                return 0;
-            })
-
-            // переназначение параметров контейнера после добавления нового элемента
-            element.forEach((container, index) => {
-                container.index = index; // текущий индекс на уровне
-                container.parentIndex = serchParam(container.parentId, arr, 'id') ? serchParam(container.parentId, arr, 'id').index : 0; // проверка актуального родительского индекса
-                container.x = ((rect.width / element.length) * (index)) + 25; // растягивание по ширене уровня
-            });
-        })
+        sortContainers(containers);
     };
     // console.log(containers);
+    draw();
+});
+
+// удаляем контейнер
+buttonDelite.addEventListener("click", () => {
+    let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер
+    if (!activContainer) {
+        console.log(`Нет активного контейнера`);
+        return;
+    };
+    // пока с потомками не удаляет
+    if (activContainer.child.length  !== 0) {
+        console.log(`У контейнера есть потомки`);
+        return;
+    };
+    containers[activContainersIndex].splice(activContainer.index, 1);
+    // зачистка родительского контейнера от удаленного ребенка
+    containers[activContainersIndex - 1][activContainer.parentIndex].child = containers[activContainersIndex - 1][activContainer.parentIndex].child.filter((child) => activContainer.id !== child);
+    sortContainers(containers);
     draw();
 });
 
@@ -114,6 +139,8 @@ canvas.addEventListener("click", (event) => {
                 // Обработка клика на объекте
                 object.isActiv ? object.isActiv = false : object.isActiv = true; // при повторном клике
                 activContainersIndex = index; // добавить в свойство объекта*
+
+                // console.log(`activ`, object);
             } else {
                 object.isActiv = false;
             };
