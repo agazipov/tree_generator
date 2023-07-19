@@ -1,8 +1,10 @@
 let nanoid = (t = 21) => crypto.getRandomValues(new Uint8Array(t)).reduce(((t, e) => t += (e &= 63) < 36 ? e.toString(36) : e < 62 ? (e - 26).toString(36).toUpperCase() : e > 62 ? "-" : "_"), "");
 
 const buttonChild = document.getElementById("addChild");
-const buttonDelite = document.getElementById("delContainer");
+const buttonDelete = document.getElementById("delContainer");
 const buttonClear = document.getElementById("clear");
+const changeInput = document.getElementById("changeInput");
+const changeButton = document.getElementById("changeButton");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
@@ -14,6 +16,7 @@ class Conteiner {
         this.x = x;
         this.y = y;
         this.id = id;
+        this.testIndex = 0;
         this.isDrag = false;
         this.isActiv = isActiv;
         this.level = level;
@@ -21,6 +24,7 @@ class Conteiner {
         this.parentId = parentId;
         this.index = 0;
         this.parentIndex = parentIndex;
+        this.title = "text";
     }
 };
 
@@ -66,7 +70,12 @@ function sortContainers(arr) {
         })
 
         // переназначение параметров контейнера после добавления нового элемента
+        let count = 0;
         element.forEach((container, index) => {
+            if (container.level === 3) {
+                container.testIndex = count;
+                count += 1;
+            }
             container.index = index; // текущий индекс на уровне
             container.parentIndex = serchParam(container.parentId, arr, 'id') ? serchParam(container.parentId, arr, 'id').index : 0; // проверка актуального родительского индекса
             container.x = ((rect.width / element.length) * (index)) + 25; // растягивание по ширене уровня
@@ -77,7 +86,7 @@ function sortContainers(arr) {
 
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
-    let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер
+    let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер ** получать индексы отдельно
     if (!activContainer) {
         console.log(`Нет активного контейнера`);
         return;
@@ -90,12 +99,12 @@ buttonChild.addEventListener("click", () => {
         containers[activContainersIndex + 1].push(obj);
         sortContainers(containers);
     };
-    // console.log(containers);
+    console.log(containers);
     draw();
 });
 
 // удаляем контейнер
-buttonDelite.addEventListener("click", () => {
+buttonDelete.addEventListener("click", () => {
     let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер
     if (!activContainer) {
         console.log(`Нет активного контейнера`);
@@ -104,6 +113,10 @@ buttonDelite.addEventListener("click", () => {
     // пока с потомками не удаляет
     if (activContainer.child.length  !== 0) {
         console.log(`У контейнера есть потомки`);
+        return;
+    };
+    if (containers[0][0].child.length  === 0) {
+        console.log(`Нельзя удалить рут`);
         return;
     };
     containers[activContainersIndex].splice(activContainer.index, 1);
@@ -121,9 +134,20 @@ buttonClear.addEventListener("click", () => {
     draw();
 });
 
+// редактирование
+let value;
+changeInput.addEventListener("change", (event) => {
+    value = event.target.value;
+    changeInput.value = "";
+});
+changeButton.addEventListener("click", () => {
+    let activContainer = serchParam(true, containers, 'isActiv');
+    containers[activContainersIndex][activContainer.index].title = value;
+    draw();
+});
+
 // активная кнопка
 canvas.addEventListener("click", (event) => {
-
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
@@ -137,8 +161,12 @@ canvas.addEventListener("click", (event) => {
                 clickY <= object.y + object.height
             ) {
                 // Обработка клика на объекте
-                object.isActiv ? object.isActiv = false : object.isActiv = true; // при повторном клике
+                object.isActiv ? // при повторном клике
+                    (object.isActiv = false, changeInput.value = "") 
+                    : 
+                    (object.isActiv = true, changeInput.value = object.title); 
                 activContainersIndex = index; // добавить в свойство объекта*
+                
 
                 // console.log(`activ`, object);
             } else {
@@ -160,6 +188,8 @@ function draw() {
             ctx.fillRect(container.x, container.y, container.width, container.height);
             ctx.fillText("index " + container.index.toString(), container.x, container.y - 5);
             ctx.fillText("parIndex " + container.parentIndex.toString(), container.x, container.y + 30);
+            ctx.fillStyle = "black";
+            ctx.fillText(container.title, container.x, container.y + 10);
 
             // отрисовываем линии
             container.child.forEach((childId) => {
