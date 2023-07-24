@@ -5,19 +5,29 @@ const buttonDelete = document.getElementById("delContainer");
 const buttonClear = document.getElementById("clear");
 const changeInput = document.getElementById("changeInput");
 const changeButton = document.getElementById("changeButton");
+const increaseScale = document.getElementById("increaseScale");
+const decreaseScale = document.getElementById("decreaseScale");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
+const initialValue = {
+    width: 20,
+    height: 20,
+    x: 75,
+    y: 75,
+}
+
 class Container {
-    constructor(x, y, level, id, isActiv, parentId, parentIndex) {
-        this.width = 20;
-        this.height = 20;
+    constructor(width, height, x, y, level, id, isActiv, parentId, parentIndex) {
+        this.width = width;
+        this.height = height;
         this.x = x;
         this.y = y;
         this.id = id;
         this.isDrag = false;
         this.isActiv = isActiv;
+        this.isOpen = false;
         this.level = level;
         this.child = [];
         this.parentId = parentId;
@@ -28,17 +38,31 @@ class Container {
     }
 };
 
-const root = new Container(25, 20, 1, nanoid(), true, null, 0);
+const root = new Container(20, 20, 20, 20, 1, nanoid(), true, null, 0);
 
 const containers = [root];
+let mask = containers.map((container) => ({...container}));
 changeInput.value = containers[0].title;
 
-    // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
+// переменные масштабирования
+let scale = 1;
+
+// переменные перемещения
+let isDragging = false; // Флаг для отслеживания, идет ли перемещение полотна
+let startDragX = 0;
+let startDragY = 0;
+let offsetX = 0;
+let offsetY = 0;
+
+// генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewContainer(parent) {
-    let x, y, level, id, isActiv, parentId, parentIndex;
+
+    let width, height, x, y, level, id, isActiv, parentId, parentIndex;
 
     id = nanoid();
     parent.child.push(id); // добавляем ид дочернего в родителя
+    width = 20;
+    height = 20;
     x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
@@ -46,7 +70,7 @@ function createNewContainer(parent) {
     parentIndex = parent.localIndex;
     isActiv = false;
 
-    return new Container(x, y, level, id, isActiv, parentId, parentIndex);
+    return new Container(width, height, x, y, level, id, isActiv, parentId, parentIndex);
 };
 
 // поиск контейнера по заданным параметрам
@@ -93,7 +117,6 @@ function sortContainers(arr, activ) {
     });
 };
 
-
 // добавить ребенка
 buttonChild.addEventListener("click", () => {
     let activContainer = serchParam(true, containers, 'isActiv'); // ищем активный контейнер ** получать индексы отдельно
@@ -106,6 +129,9 @@ buttonChild.addEventListener("click", () => {
     containers.push(obj);
     sortContainers(containers, activContainer);
 
+
+    // scaleFC();
+    mask = containers.map((container) => ({...container}));
     draw();
 });
 
@@ -130,7 +156,7 @@ buttonDelete.addEventListener("click", () => {
     // зачистка родительского контейнера от удаленного ребенка (находим глобальный индекс родителя)
     let serchParent = serchParam(activContainer.parentId, containers, 'id');
     containers[serchParent.globalIndex].child = containers[serchParent.globalIndex].child.filter((child) => activContainer.id !== child);
-    
+
     sortContainers(containers, containers[serchParent.globalIndex]);
     draw();
 });
@@ -155,13 +181,35 @@ changeButton.addEventListener("click", () => {
     draw();
 });
 
+// масштабирование
+// * не меняются координаты при масштабировании
+function scaleFC() {
+    console.log(scale);
+    mask.forEach((container) => {
+        container.x *= scale;
+        container.y *= scale;
+        container.width *= scale;
+        container.height *= scale;
+    });
+    draw();
+
+};
+increaseScale.addEventListener("click", () => {
+    scale += 0.25;
+    scaleFC();
+});
+decreaseScale.addEventListener("click", () => {
+    scale -= 0.25;
+    scaleFC();
+});
+
 // активная кнопка
 canvas.addEventListener("click", (event) => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
     // Проверяем объекты на пересечение с кликом
-    containers.forEach((object) => {
+    mask.forEach((object) => {
         if (
             clickX >= object.x &&
             clickX <= object.x + object.width &&
@@ -177,19 +225,69 @@ canvas.addEventListener("click", (event) => {
         } else {
             object.isActiv = false;
         };
+        if (
+            clickX >= object.x + 20 &&
+            clickX <= object.x + 10 + 20 &&
+            clickY >= object.y &&
+            clickY <= object.y + 10
+        ) {
+            // Обработка клика на объекте
+            object.isOpen ?
+                (object.isOpen = false)
+                :
+                (object.isOpen = true);
+        };
     })
     draw();
+});
+
+// перемещение
+function translateFC() {
+    containers.forEach((container) => {
+        container.x = offsetX;
+        container.y = offsetY;
+    });
+    draw();
+};
+canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 3) { // Проверяем нажатие правой кнопки мыши
+        isDragging = true;
+        startDragX = event.clientX;
+        startDragY = event.clientY;
+    }
+});
+canvas.addEventListener('mousemove', (event) => {
+    const dx = event.clientX - startDragX; // Смещение по оси X
+    const dy = event.clientY - startDragY; // Смещение по оси Y
+    if (isDragging) {
+        startDragX = event.clientX;
+        startDragY = event.clientY;
+        offsetX += dx;
+        offsetY += dy;
+        translateFC()
+    }
+});
+canvas.addEventListener('mouseup', (event) => {
+    if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
+        isDragging = false;
+        // offsetX += event.clientX - startDragX;
+        // offsetY += event.clientY - startDragY;
+        translateFC();
+    }
 });
 
 // функция рисования
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
+    console.log('containers' ,containers);
+    console.log('mask',mask);
+    // ctx.scale(scale, scale); // масштабирование
 
-    containers.forEach(container => {
+    mask.forEach(container => {
         // отрисовываем линии
         container.child.forEach((childId) => {
             // поиск дочерних у родителя на нижнем уровне
-            const findContainer = containers.find((container) => container.id === childId);
+            const findContainer = mask.find((container) => container.id === childId);
             if (findContainer) {
 
                 ctx.beginPath();
@@ -203,15 +301,22 @@ function draw() {
         });
 
         // отрисовываем контейнеры
-        container.isActiv ? ctx.fillStyle = "red" : ctx.fillStyle = 'white';
+        if (container.isActiv) {
+            ctx.fillStyle = "red"
+        } else {
+            ctx.fillStyle = 'white'
+        };
+        if (container.isOpen) {
+            ctx.fillRect(container.x, container.y, container.width + 50, container.height + 30);
+        };
         ctx.fillRect(container.x, container.y, container.width, container.height);
-        ctx.fillText("localIndex " + container.localIndex.toString(), container.x, container.y - 5);
-        ctx.fillText("parIndex " + container.parentIndex.toString(), container.x, container.y + 30);
-        ctx.fillText(container.globalIndex.toString(), container.x + 25, container.y + 10);
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(container.x + 20, container.y, 10, 10);
         ctx.fillStyle = "black";
-        ctx.fillText(container.id.substr(0, 3), container.x, container.y + 8);
-        ctx.fillText(container.title, container.x, container.y + 16);
-    })
+        ctx.fillText(container.title, container.x, container.y + 8);
+    });
+
+    scale = 1;
 };
 
 draw();
