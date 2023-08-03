@@ -28,11 +28,11 @@ class Container {
         this.localIndex = 0;
         this.globalIndex = 0;
         this.parentIndex = parentIndex;
-        this.title = "text";
+        this.title = "Name";
     }
 };
 
-const root = new Container(20, 20, 25, 20, 1, nanoid(), true, null, 0);
+const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0);
 
 const containers = [root];
 let mask = containers.map((container) => ({ ...container }));
@@ -56,8 +56,8 @@ function createNewContainer(parent) {
 
     id = nanoid();
     parent.child.push(id); // добавляем ид дочернего в родителя
-    width = 20;
-    height = 20;
+    width = 46;
+    height = 18;
     x = 75;
     y = 75 * parent.level;
     level = parent.level + 1;
@@ -81,11 +81,17 @@ function serchParam(param, arr, property) {
 function sortContainers(arr, activ) {
     // считаем сколько элементов на уровне
     let levelQuantity = 0;
+    let parentLevelQuantity = 0;
     arr.forEach((container) => {
         if (container.level === activ.level + 1) {
             levelQuantity += 1;
         }
+        if (container.level === activ.level) {
+            parentLevelQuantity += 1;
+        }
     });
+    // возможна ошибка в выборе ширины как дефолта (надо обращатся к род контенеру)
+    let numLvl = (rect.width / parentLevelQuantity); // значение выделенное под один элемент в зависимости от кол-ва родителей
 
     // сортировка контейнеров на своем уровне по родительскому индексу
     arr.sort((a, b) => {
@@ -101,7 +107,15 @@ function sortContainers(arr, activ) {
         if (container.level === activ.level + 1) {
             container.localIndex = count;
             count += 1;
-            container.x = ((rect.width / levelQuantity) * (container.localIndex)) + 25; // растягивание по ширене уровня
+            // container.x = ((rect.width / (levelQuantity + 1)) * (container.localIndex)); // растягивание по ширене уровня
+
+            console.log("тест параметров",
+                numLvl / serchParam(container.parentId, arr, 'id').child.length
+            );
+
+            container.x = (numLvl / serchParam(container.parentId, arr, 'id').child.length *
+                serchParam(container.parentId, arr, 'id').child.indexOf(container.id))
+                + container.parentIndex * numLvl + 30; // растягивание по ширене уровня
         }
     });
 
@@ -160,6 +174,9 @@ buttonClear.addEventListener("click", () => {
     containers[0].isActiv = true;
     changeInput.value = containers[0].title;
     scale = 1;
+    spanScale.innerText = scale;
+    offsetX = 0;
+    offsetY = 0;
     motion();
 });
 
@@ -218,22 +235,27 @@ canvas.addEventListener("click", (event) => {
                 (object.isActiv = true, changeInput.value = object.title, activContainer = object);
 
             serchParam(object.id, containers, 'id').isActiv = true;
-            // console.log(`activContainer`, object);
+            console.log(`activContainer`, object);
         } else {
             object.isActiv = false;
             serchParam(object.id, containers, 'id').isActiv = false;
         };
+        // кlик по плашке инфо
         if (
-            clickX >= object.x + 20 &&
-            clickX <= object.x + 10 + 20 &&
-            clickY >= object.y &&
-            clickY <= object.y + 10
+            clickX >= object.x + 44 &&
+            clickX <= object.x + 56 &&
+            clickY >= object.y - 3 &&
+            clickY <= object.y + 9
         ) {
-            // Обработка клика на объекте
-            object.isOpen ?
-                (object.isOpen = false)
-                :
-                (object.isOpen = true);
+            object.isOpen = true;
+        };
+        if (
+            clickX >= object.x + 74 &&
+            clickX <= object.x + 86 &&
+            clickY >= object.y - 3 &&
+            clickY <= object.y + 9
+        ) {
+            object.isOpen = false;
         };
     });
     draw();
@@ -278,8 +300,8 @@ function draw() {
             const findContainer = mask.find((container) => container.id === childId);
             if (findContainer) {
                 ctx.beginPath();
-                ctx.moveTo(container.x + 10, container.y + 10);
-                ctx.lineTo(findContainer.x + 10, findContainer.y + 10);
+                ctx.moveTo(container.x + 23, container.y + 9);
+                ctx.lineTo(findContainer.x + 23, findContainer.y + 9);
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 2;
                 ctx.stroke();
@@ -288,20 +310,59 @@ function draw() {
         });
 
         // отрисовываем контейнеры
-        if (container.isActiv) {
-            ctx.fillStyle = "red"
-        } else {
-            ctx.fillStyle = 'white'
-        };
         if (container.isOpen) {
-            ctx.fillRect(container.x, container.y, container.width + 50, container.height + 30);
-        };
-        ctx.fillRect(container.x, container.y, container.width, container.height);
-        ctx.fillStyle = "yellow";
-        ctx.fillRect(container.x + 20, container.y, 10, 10);
-        ctx.fillStyle = "black";
-        ctx.fillText(container.title, container.x, container.y + 8);
+            roundedRect(container, container.width + 30, container.height + 30, 7);
+            infoRect(container.x + 80, container.y + 3, 6, true);
+        } else {
+            roundedRect(container, container.width, container.height, 5);
+            infoRect(container.x + 50, container.y + 3, 6);
+        }
     });
+};
+
+// контейнер
+function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height, borderRadius) {
+
+    ctx.beginPath(); // Начните новый путь
+    ctx.moveTo(x + borderRadius, y); // Начало пути в верхнем левом углу прямоугольника
+    ctx.lineTo(x + width - borderRadius, y); // Рисуем линию от левого верхнего угла до правого верхнего угла
+    ctx.arcTo(x + width, y, x + width, y + borderRadius, borderRadius); // Создаем скругление в верхнем правом углу
+    ctx.lineTo(x + width, y + height - borderRadius); // Рисуем линию в правый нижний угол
+    ctx.arcTo(x + width, y + height, x + width - borderRadius, y + height, borderRadius); // Создаем скругление в нижнем правом углу
+    ctx.lineTo(x + borderRadius, y + height); // Рисуем линию в нижний левый угол
+    ctx.arcTo(x, y + height, x, y + height - borderRadius, borderRadius); // Создаем скругление в нижнем левом углу
+    ctx.lineTo(x, y + borderRadius); // Рисуем линию в левый верхний угол
+    ctx.arcTo(x, y, x + borderRadius, y, borderRadius); // Создаем скругление в верхнем левом углу
+    ctx.closePath(); // Закончите путь
+
+    // Заполните прямоугольник с заданным цветом
+    if (isActiv) {
+        ctx.fillStyle = "red"
+    } else {
+        ctx.fillStyle = 'white'
+    };
+    ctx.fill();
+    // текст в контейнере перенести в функцию
+    ctx.font = "10px Arial";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "start";
+    ctx.fillText(title, x + 6, y + 12);
+    isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
+};
+
+// кружок с воскицательным знаком
+function infoRect(x, y, radius, open = false) {
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI); // рисует круг
+    ctx.fillStyle = "yellow"; // устанавливает цвет для заполнения
+    ctx.fill(); // заполняет круг указанным цветом
+
+    // Рисует восклицательный знак
+    ctx.font = "12px Arial"; // устанавливает шрифт и размер текста
+    ctx.fillStyle = "black"; // устанавливает цвет для заполнения текста
+    ctx.textAlign = "center"; // выравнивание текста по центру
+    ctx.fillText(open ? "X" : "!", x, y + 5); // рисует текст в указанных координатах
 };
 
 draw();
