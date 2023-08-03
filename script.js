@@ -8,6 +8,8 @@ const changeButton = document.getElementById("changeButton");
 const increaseScale = document.getElementById("increaseScale");
 const decreaseScale = document.getElementById("decreaseScale");
 const spanScale = document.getElementById("spanScale");
+const saveButton = document.getElementById("saveButton");
+const file = document.getElementById("file");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
@@ -34,7 +36,7 @@ class Container {
 
 const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0);
 
-const containers = [root];
+let containers = [root];
 let mask = containers.map((container) => ({ ...container }));
 changeInput.value = containers[0].title;
 let activContainer = root;
@@ -108,10 +110,6 @@ function sortContainers(arr, activ) {
             container.localIndex = count;
             count += 1;
             // container.x = ((rect.width / (levelQuantity + 1)) * (container.localIndex)); // растягивание по ширене уровня
-
-            console.log("тест параметров",
-                numLvl / serchParam(container.parentId, arr, 'id').child.length
-            );
 
             container.x = (numLvl / serchParam(container.parentId, arr, 'id').child.length *
                 serchParam(container.parentId, arr, 'id').child.indexOf(container.id))
@@ -188,7 +186,7 @@ changeInput.addEventListener("change", (event) => {
 changeButton.addEventListener("click", () => {
     // let activContainer = serchParam(true, containers, 'isActiv');
     containers[activContainer.globalIndex].title = inputValue;
-    draw();
+    motion();
 });
 
 // масштабирование
@@ -288,6 +286,31 @@ canvas.addEventListener('mouseup', (event) => {
         motion();
     }
 });
+
+// сейвинг загрузинг
+saveButton.addEventListener('click', function () {
+    let objectToSave = containers; // Replace this with your object
+
+    let blob = new Blob([JSON.stringify(objectToSave)], { type: "application/json" });
+    saveAs(blob, "object.json");
+});
+file.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+  
+    console.log(file);
+    const reader = new FileReader();
+  
+    reader.onload = function (e) {
+      const contents = e.target.result;
+      const parsedData = JSON.parse(contents);
+      
+      // переделать на мутацию а не создовать новый объект
+      containers = parsedData.map((container) => ({ ...container }));
+      motion()
+    };
+  
+    reader.readAsText(file);
+  });
 
 // функция рисования
 function draw() {
