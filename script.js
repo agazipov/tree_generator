@@ -36,7 +36,7 @@ class Container {
 
 const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0);
 
-let containers = [root];
+const containers = [root];
 let mask = containers.map((container) => ({ ...container }));
 changeInput.value = containers[0].title;
 let activContainer = root;
@@ -83,17 +83,17 @@ function serchParam(param, arr, property) {
 function sortContainers(arr, activ) {
     // считаем сколько элементов на уровне
     let levelQuantity = 0;
-    let parentLevelQuantity = 0;
+    let parentNumber = 0;
     arr.forEach((container) => {
         if (container.level === activ.level + 1) {
             levelQuantity += 1;
         }
         if (container.level === activ.level) {
-            parentLevelQuantity += 1;
+            parentNumber += 1;
         }
     });
     // возможна ошибка в выборе ширины как дефолта (надо обращатся к род контенеру)
-    let numLvl = (rect.width / parentLevelQuantity); // значение выделенное под один элемент в зависимости от кол-ва родителей
+    let widthFromParent = (rect.width / parentNumber); // значение выделенное под один элемент в зависимости от кол-ва родителей
 
     // сортировка контейнеров на своем уровне по родительскому индексу
     arr.sort((a, b) => {
@@ -106,21 +106,35 @@ function sortContainers(arr, activ) {
     let count = 0;
     arr.forEach((container, index) => {
         container.globalIndex = index; // для удаления элемента
+        // пересчет локального индекса от активного контейнера
+        // * пересчет при удалениии!!!
         if (container.level === activ.level + 1) {
             container.localIndex = count;
             count += 1;
+        }
+
+        if (container.level === 2) {
+            container.x = ((rect.width / root.child.length + 1) * root.child.indexOf(container.id)) + 30;
+        } 
+        if (container.level !== 1 && container.level !== 2) {
+            // container.localIndex = count;
+            // count += 1;
             // container.x = ((rect.width / (levelQuantity + 1)) * (container.localIndex)); // растягивание по ширене уровня
 
-            container.x = (numLvl / serchParam(container.parentId, arr, 'id').child.length *
-                serchParam(container.parentId, arr, 'id').child.indexOf(container.id))
-                + container.parentIndex * numLvl + 30; // растягивание по ширене уровня
+            let parentContainer = serchParam(container.parentId, arr, 'id');
+            container.x = (widthFromParent / parentContainer.child.length *
+                parentContainer.child.indexOf(container.id))
+                + parentContainer.x; // растягивание по ширене уровня
+            // + container.parentIndex * widthFromParent + 30; // старая реализация
+            console.log(`container ${container.globalIndex}`,container.x);
         }
     });
 
     // отдельный цикл так как если добавлять элемент с индексом в середину то не обновится последний элемент
+    // проверка актуального родительского индекса
     arr.forEach((container) => {
         let serchParentId = serchParam(container.parentId, arr, 'id');
-        container.parentIndex = serchParentId ? serchParentId.localIndex : 0; // проверка актуального родительского индекса
+        container.parentIndex = serchParentId ? serchParentId.localIndex : 0;
     });
 };
 
@@ -171,6 +185,7 @@ buttonClear.addEventListener("click", () => {
     containers[0].child.length = 0;
     containers[0].isActiv = true;
     changeInput.value = containers[0].title;
+    activContainer = containers[0];
     scale = 1;
     spanScale.innerText = scale;
     offsetX = 0;
@@ -192,7 +207,7 @@ changeButton.addEventListener("click", () => {
 // масштабирование
 // * не меняются координаты при масштабировании
 function motion() {
-    mask = containers.map((container) => ({ ...container }));
+    mask = containers.map((container) => ({ ...container })); // * вынести в другое место или выполнять один раз перед началом перетаскивания
     mask.forEach((container) => {
         container.x = (container.x + offsetX) * scale;
         container.y = (container.y + offsetY) * scale;
@@ -281,9 +296,6 @@ canvas.addEventListener('mousemove', (event) => {
 canvas.addEventListener('mouseup', (event) => {
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
-        // offsetX += event.clientX - startDragX;
-        // offsetY += event.clientY - startDragY;
-        motion();
     }
 });
 
@@ -296,21 +308,19 @@ saveButton.addEventListener('click', function () {
 });
 file.addEventListener('change', (event) => {
     const file = event.target.files[0];
-  
-    console.log(file);
+
     const reader = new FileReader();
-  
+
     reader.onload = function (e) {
-      const contents = e.target.result;
-      const parsedData = JSON.parse(contents);
-      
-      // переделать на мутацию а не создовать новый объект
-      containers = parsedData.map((container) => ({ ...container }));
-      motion()
+        const contents = e.target.result;
+        const parsedData = JSON.parse(contents);
+
+        containers.push(...parsedData);
+        motion()
     };
-  
+
     reader.readAsText(file);
-  });
+});
 
 // функция рисования
 function draw() {
@@ -344,7 +354,7 @@ function draw() {
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height, borderRadius) {
+function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width, height, borderRadius) {
 
     ctx.beginPath(); // Начните новый путь
     ctx.moveTo(x + borderRadius, y); // Начало пути в верхнем левом углу прямоугольника
@@ -358,6 +368,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height, bor
     ctx.arcTo(x, y, x + borderRadius, y, borderRadius); // Создаем скругление в верхнем левом углу
     ctx.closePath(); // Закончите путь
 
+    // ctx.fillRect(x, y, width, height);
+
     // Заполните прямоугольник с заданным цветом
     if (isActiv) {
         ctx.fillStyle = "red"
@@ -369,7 +381,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height, bor
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    ctx.fillText(title, x + 6, y + 12);
+    // ctx.fillText(title, x + 6, y + 12);
+    ctx.fillText(globalIndex, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
