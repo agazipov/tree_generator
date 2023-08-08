@@ -10,12 +10,13 @@ const decreaseScale = document.getElementById("decreaseScale");
 const spanScale = document.getElementById("spanScale");
 const saveButton = document.getElementById("saveButton");
 const file = document.getElementById("file");
+const gitReq = document.getElementById("getReq")
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Container {
-    constructor(width, height, x, y, level, id, isActiv, parentId, parentIndex) {
+    constructor(width, height, x, y, level, id, isActiv, parentId, parentIndex, title) {
         this.width = width;
         this.height = height;
         this.x = x;
@@ -30,16 +31,45 @@ class Container {
         this.localIndex = 0;
         this.globalIndex = 0;
         this.parentIndex = parentIndex;
-        this.title = "Name";
+        this.title = title;
     }
 };
 
-const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0);
+const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0, 'root');
 
 const containers = [root];
 let mask = containers.map((container) => ({ ...container }));
 changeInput.value = containers[0].title;
 let activContainer = root;
+let gitElements = [
+    { name: 'Button.jsx', x: 600, y: 0 },
+    { name: 'Dish.jsx', x: 600, y: 15 },
+    { name: 'Footer.jsx', x: 600, y: 30 },
+    { name: 'Header.jsx', x: 600, y: 45 },
+    { name: 'Layout.jsx', x: 600, y: 60 },
+    { name: 'Menu.jsx', x: 600, y: 75 },
+    { name: 'MenuSkeleton.jsx', x: 600, y: 90 },
+    { name: 'NewReviewForm.jsx', x: 600, y: 105 },
+    { name: 'Rating.jsx', x: 600, y: 120 },
+    { name: 'Restaurant.jsx', x: 600, y: 135 },
+    { name: 'RestaurantCard.jsx', x: 600, y: 150 },
+    { name: 'Review.jsx', x: 600, y: 165 },
+    { name: 'Reviews.jsx', x: 600, y: 180 },
+    { name: 'Skeleton.jsx', x: 600, y: 195 },
+    { name: 'Tab.jsx', x: 600, y: 210 },
+    { name: 'User.jsx', x: 600, y: 225 },
+    { name: 'DishContainer.jsx', x: 600, y: 240 },
+    { name: 'MenuContainer.jsx', x: 600, y: 255 },
+    { name: 'NewReviewFormContainer.jsx', x: 600, y: 270 },
+    { name: 'RestaurantContainer.jsx', x: 600, y: 285 },
+    { name: 'RestaurantsContainer.jsx', x: 600, y: 300 },
+    { name: 'RestaurantsTabContainer.jsx', x: 600, y: 315 },
+    { name: 'ReviewContainer.jsx', x: 600, y: 330 },
+    { name: 'ReviewsContainer.jsx', x: 600, y: 345 },
+    { name: 'UserContainer.jsx', x: 600, y: 360 },
+    { name: 'device.jsx', x: 600, y: 375 },
+    { name: 'theme.jsx', x: 600, y: 390 },
+    { name: 'StoreProvider.jsx', x: 600, y: 405, isDragging: false },];
 
 // переменные масштабирования
 let scale = 1;
@@ -52,8 +82,22 @@ let startDragY = 0;
 let offsetX = 0;
 let offsetY = 0;
 
+let dragIndex = null;
+
+// генерация на отрисовку
+function motion() {
+    mask = containers.map((container) => ({ ...container })); // * вынести в другое место или выполнять один раз перед началом перетаскивания
+    mask.forEach((container) => {
+        container.x = (container.x + offsetX) * scale;
+        container.y = (container.y + offsetY) * scale;
+        container.width *= scale;
+        container.height *= scale;
+    });
+    draw();
+};
+
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
-function createNewContainer(parent) {
+function createNewContainer(parent, title) {
     let width, height, x, y, level, id, isActiv, parentId, parentIndex;
 
     id = nanoid();
@@ -67,7 +111,7 @@ function createNewContainer(parent) {
     parentIndex = parent.localIndex;
     isActiv = false;
 
-    return new Container(width, height, x, y, level, id, isActiv, parentId, parentIndex);
+    return new Container(width, height, x, y, level, id, isActiv, parentId, parentIndex, title);
 };
 
 // поиск контейнера по заданным параметрам
@@ -82,16 +126,26 @@ function serchParam(param, arr, property) {
 // сортировка массива
 function sortContainers(arr, activ) {
     // считаем сколько элементов на уровне
-    let levelQuantity = 0;
+    let map = [];
+    let map2 = [];
     let parentNumber = 0;
     arr.forEach((container) => {
-        if (container.level === activ.level + 1) {
-            levelQuantity += 1;
+        if (!map[container.level - 1]) {
+            map[container.level - 1] = 0;
         }
-        if (container.level === activ.level) {
-            parentNumber += 1;
+        map[container.level - 1] += 1;
+
+        if (!map2[container.level - 1]) {
+            map2[container.level - 1] = 0;
         }
+        map2[container.level - 1] = rect.width * (1 + 0.1 * map[container.level - 1]);
+
+
+        // if (container.level === activ.level) {
+        //     parentNumber += 1;
+        // }
     });
+    console.log(map2);
     // возможна ошибка в выборе ширины как дефолта (надо обращатся к род контенеру)
     let widthFromParent = (rect.width / parentNumber); // значение выделенное под один элемент в зависимости от кол-ва родителей
 
@@ -115,18 +169,18 @@ function sortContainers(arr, activ) {
 
         if (container.level === 2) {
             container.x = ((rect.width / root.child.length + 1) * root.child.indexOf(container.id)) + 30;
-        } 
+        }
         if (container.level !== 1 && container.level !== 2) {
             // container.localIndex = count;
             // count += 1;
             // container.x = ((rect.width / (levelQuantity + 1)) * (container.localIndex)); // растягивание по ширене уровня
 
             let parentContainer = serchParam(container.parentId, arr, 'id');
-            container.x = (widthFromParent / parentContainer.child.length *
+            container.x = ((rect.width / map[container.level - 1]) / parentContainer.child.length *
                 parentContainer.child.indexOf(container.id))
                 + parentContainer.x; // растягивание по ширене уровня
             // + container.parentIndex * widthFromParent + 30; // старая реализация
-            console.log(`container ${container.globalIndex}`,container.x);
+            console.log(`container ${container.globalIndex}`, container.x);
         }
     });
 
@@ -145,7 +199,7 @@ buttonChild.addEventListener("click", () => {
         console.log(`Нет активного контейнера`);
         return;
     };
-    let obj = createNewContainer(activContainer);
+    let obj = createNewContainer(activContainer, 'Name');
 
     containers.push(obj);
     sortContainers(containers, activContainer);
@@ -206,16 +260,6 @@ changeButton.addEventListener("click", () => {
 
 // масштабирование
 // * не меняются координаты при масштабировании
-function motion() {
-    mask = containers.map((container) => ({ ...container })); // * вынести в другое место или выполнять один раз перед началом перетаскивания
-    mask.forEach((container) => {
-        container.x = (container.x + offsetX) * scale;
-        container.y = (container.y + offsetY) * scale;
-        container.width *= scale;
-        container.height *= scale;
-    });
-    draw();
-};
 increaseScale.addEventListener("click", () => {
     scale += 0.25;
     spanScale.innerText = scale;
@@ -276,11 +320,24 @@ canvas.addEventListener("click", (event) => {
 
 // перемещение
 canvas.addEventListener('mousedown', (event) => {
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
     if (event.button === 3) { // Проверяем нажатие правой кнопки мыши
         isDragging = true;
         startDragX = event.clientX;
         startDragY = event.clientY;
     }
+    // перемещаем гитовые элементы
+    gitElements.forEach((element, index) => {
+        if (
+            clickX >= element.x &&
+            clickX <= element.x + 100 &&
+            clickY >= element.y &&
+            clickY <= element.y + 16
+        ) {
+            dragIndex = index;
+        };
+    });
 });
 canvas.addEventListener('mousemove', (event) => {
     const dx = event.clientX - startDragX; // Смещение по оси X
@@ -290,13 +347,37 @@ canvas.addEventListener('mousemove', (event) => {
         startDragY = event.clientY;
         offsetX += dx;
         offsetY += dy;
-        motion();
-    }
+    };
+
+    dragIndex && (gitElements[dragIndex].x = event.clientX - rect.left - 50);
+    dragIndex && (gitElements[dragIndex].y = event.clientY - rect.top - 8);
+
+    motion();
 });
 canvas.addEventListener('mouseup', (event) => {
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
-    }
+    };
+
+    dragIndex && containers.forEach((element) => {
+        if (
+            gitElements[dragIndex].x + 50 >= element.x &&
+            gitElements[dragIndex].x + 50 <= element.x + 100 &&
+            gitElements[dragIndex].y + 8 >= element.y &&
+            gitElements[dragIndex].y + 8 <= element.y + 16
+        ) {
+            activContainer = element;
+            let obj = createNewContainer(activContainer, gitElements[dragIndex].name);
+
+            containers.push(obj);
+            sortContainers(containers, activContainer);
+
+            motion();
+        };
+    });
+    dragIndex = null;
 });
 
 // сейвинг загрузинг
@@ -320,6 +401,21 @@ file.addEventListener('change', (event) => {
     };
 
     reader.readAsText(file);
+});
+
+// запросинг
+gitReq.addEventListener('click', () => {
+    // "https://api.github.com/repos/agazipov/react-2023-05-25/git/trees/main?recursive=1" ссылка на папку src
+    fetch("https://api.github.com/repos/agazipov/react-2023-05-25/git/trees/ec1cc45923c500c4124aef5c15b485da9290dc96?recursive=1")
+        .then((response) => response.json())
+        .then((data) => {
+            gitElements = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
+                return { name: path.substr(path.lastIndexOf('/') + 1), x: 600, y: index * 15 };
+                // return path.includes('/') ? path.substr(path.lastIndexOf('/') + 1) : path;
+            });
+            console.log(gitElements);
+            draw()
+        })
 });
 
 // функция рисования
@@ -349,7 +445,19 @@ function draw() {
         } else {
             roundedRect(container, container.width, container.height, 5);
             infoRect(container.x + 50, container.y + 3, 6);
-        }
+        };
+    });
+
+    gitElements.forEach(({ name, x, y }) => {
+        ctx.beginPath();
+        ctx.fillStyle = "blue";
+        ctx.fillRect(x, y + 4, 100, 14);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.textAlign = "start";
+        ctx.fillText(name, x + 10, y + 15);
+        ctx.closePath();
+
     });
 };
 
@@ -372,17 +480,17 @@ function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width
 
     // Заполните прямоугольник с заданным цветом
     if (isActiv) {
-        ctx.fillStyle = "red"
+        ctx.fillStyle = "red";
     } else {
-        ctx.fillStyle = 'white'
+        ctx.fillStyle = 'white';
     };
     ctx.fill();
     // текст в контейнере перенести в функцию
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    // ctx.fillText(title, x + 6, y + 12);
-    ctx.fillText(globalIndex, x + 6, y + 12);
+    ctx.fillText(title, x + 6, y + 12);
+    // ctx.fillText(globalIndex, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
@@ -399,6 +507,7 @@ function infoRect(x, y, radius, open = false) {
     ctx.fillStyle = "black"; // устанавливает цвет для заполнения текста
     ctx.textAlign = "center"; // выравнивание текста по центру
     ctx.fillText(open ? "X" : "!", x, y + 5); // рисует текст в указанных координатах
+    ctx.closePath();
 };
 
 draw();
