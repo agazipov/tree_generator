@@ -10,7 +10,10 @@ const decreaseScale = document.getElementById("decreaseScale");
 const spanScale = document.getElementById("spanScale");
 const saveButton = document.getElementById("saveButton");
 const file = document.getElementById("file");
-const gitReq = document.getElementById("getReq")
+const gitReq = document.getElementById("gitReq");
+const urlImput = document.getElementById("urlImput");
+const urlSelector = document.getElementById("urlSelector");
+const gitPanel = document.getElementById("gitPanel");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
@@ -41,35 +44,8 @@ const containers = [root];
 let mask = containers.map((container) => ({ ...container }));
 changeInput.value = containers[0].title;
 let activContainer = root;
-let gitElements = [
-    { name: 'Button.jsx', x: 600, y: 0 },
-    { name: 'Dish.jsx', x: 600, y: 15 },
-    { name: 'Footer.jsx', x: 600, y: 30 },
-    { name: 'Header.jsx', x: 600, y: 45 },
-    { name: 'Layout.jsx', x: 600, y: 60 },
-    { name: 'Menu.jsx', x: 600, y: 75 },
-    { name: 'MenuSkeleton.jsx', x: 600, y: 90 },
-    { name: 'NewReviewForm.jsx', x: 600, y: 105 },
-    { name: 'Rating.jsx', x: 600, y: 120 },
-    { name: 'Restaurant.jsx', x: 600, y: 135 },
-    { name: 'RestaurantCard.jsx', x: 600, y: 150 },
-    { name: 'Review.jsx', x: 600, y: 165 },
-    { name: 'Reviews.jsx', x: 600, y: 180 },
-    { name: 'Skeleton.jsx', x: 600, y: 195 },
-    { name: 'Tab.jsx', x: 600, y: 210 },
-    { name: 'User.jsx', x: 600, y: 225 },
-    { name: 'DishContainer.jsx', x: 600, y: 240 },
-    { name: 'MenuContainer.jsx', x: 600, y: 255 },
-    { name: 'NewReviewFormContainer.jsx', x: 600, y: 270 },
-    { name: 'RestaurantContainer.jsx', x: 600, y: 285 },
-    { name: 'RestaurantsContainer.jsx', x: 600, y: 300 },
-    { name: 'RestaurantsTabContainer.jsx', x: 600, y: 315 },
-    { name: 'ReviewContainer.jsx', x: 600, y: 330 },
-    { name: 'ReviewsContainer.jsx', x: 600, y: 345 },
-    { name: 'UserContainer.jsx', x: 600, y: 360 },
-    { name: 'device.jsx', x: 600, y: 375 },
-    { name: 'theme.jsx', x: 600, y: 390 },
-    { name: 'StoreProvider.jsx', x: 600, y: 405, isDragging: false },];
+let gitBlob = [];
+let gitTree = [];
 
 // переменные масштабирования
 let scale = 1;
@@ -319,6 +295,7 @@ canvas.addEventListener("click", (event) => {
 });
 
 // перемещение
+let savePositionX, savePositionY;
 canvas.addEventListener('mousedown', (event) => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
@@ -328,7 +305,7 @@ canvas.addEventListener('mousedown', (event) => {
         startDragY = event.clientY;
     }
     // перемещаем гитовые элементы
-    gitElements.forEach((element, index) => {
+    gitBlob.forEach((element, index) => {
         if (
             clickX >= element.x &&
             clickX <= element.x + 100 &&
@@ -336,6 +313,8 @@ canvas.addEventListener('mousedown', (event) => {
             clickY <= element.y + 16
         ) {
             dragIndex = index;
+            savePositionX = element.x;
+            savePositionY = element.y;
         };
     });
 });
@@ -349,8 +328,8 @@ canvas.addEventListener('mousemove', (event) => {
         offsetY += dy;
     };
 
-    dragIndex && (gitElements[dragIndex].x = event.clientX - rect.left - 50);
-    dragIndex && (gitElements[dragIndex].y = event.clientY - rect.top - 8);
+    dragIndex && (gitBlob[dragIndex].x = event.clientX - rect.left - 50);
+    dragIndex && (gitBlob[dragIndex].y = event.clientY - rect.top - 8);
 
     motion();
 });
@@ -363,13 +342,13 @@ canvas.addEventListener('mouseup', (event) => {
 
     dragIndex && containers.forEach((element) => {
         if (
-            gitElements[dragIndex].x + 50 >= element.x &&
-            gitElements[dragIndex].x + 50 <= element.x + 100 &&
-            gitElements[dragIndex].y + 8 >= element.y &&
-            gitElements[dragIndex].y + 8 <= element.y + 16
+            gitBlob[dragIndex].x + 50 >= element.x &&
+            gitBlob[dragIndex].x + 50 <= element.x + 100 &&
+            gitBlob[dragIndex].y + 8 >= element.y &&
+            gitBlob[dragIndex].y + 8 <= element.y + 16
         ) {
             activContainer = element;
-            let obj = createNewContainer(activContainer, gitElements[dragIndex].name);
+            let obj = createNewContainer(activContainer, gitBlob[dragIndex].name);
 
             containers.push(obj);
             sortContainers(containers, activContainer);
@@ -377,8 +356,23 @@ canvas.addEventListener('mouseup', (event) => {
             motion();
         };
     });
+    dragIndex && (gitBlob[dragIndex].x = savePositionX);
+    dragIndex && (gitBlob[dragIndex].y = savePositionY);
     dragIndex = null;
 });
+
+// открываем/скрываем панель элементов гита
+let openGitPanel = false;
+gitPanel.addEventListener('click', () => {
+    openGitPanel = !openGitPanel;
+    motion();
+});
+
+// ссылка на репу
+let urlImputValue;
+urlImput.addEventListener('change', (event) => {
+    urlImputValue = event.target.value;
+})
 
 // сейвинг загрузинг
 saveButton.addEventListener('click', function () {
@@ -405,16 +399,35 @@ file.addEventListener('change', (event) => {
 
 // запросинг
 gitReq.addEventListener('click', () => {
-    // "https://api.github.com/repos/agazipov/react-2023-05-25/git/trees/main?recursive=1" ссылка на папку src
-    fetch("https://api.github.com/repos/agazipov/react-2023-05-25/git/trees/ec1cc45923c500c4124aef5c15b485da9290dc96?recursive=1")
+    fetch(`https://api.github.com/repos/${urlImputValue}/git/trees/main?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
-            gitElements = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
+            gitTree = data.tree.filter(({ path, type }) => type === 'tree' && !path.includes('/'))
+            gitTree.forEach((element) => {
+                const newOption = document.createElement('option');
+                newOption.textContent = element.path;
+                urlSelector.insertAdjacentElement('afterbegin', newOption);
+            });
+            console.log(gitTree);
+        })
+
+});
+urlSelector.addEventListener('change', (event) => {
+    let shaTree;
+    gitTree.forEach(({ path, sha }) => {
+        if (path === event.target.value) {
+            shaTree = sha;
+        }
+    });
+    fetch(`https://api.github.com/repos/${urlImputValue}/git/trees/${shaTree}?recursive=1`)
+        .then((response) => response.json())
+        .then((data) => {
+            gitBlob = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
                 return { name: path.substr(path.lastIndexOf('/') + 1), x: 600, y: index * 15 };
                 // return path.includes('/') ? path.substr(path.lastIndexOf('/') + 1) : path;
             });
-            console.log(gitElements);
-            draw()
+            console.log(gitBlob);
+            motion();
         })
 });
 
@@ -448,7 +461,7 @@ function draw() {
         };
     });
 
-    gitElements.forEach(({ name, x, y }) => {
+    openGitPanel && gitBlob.forEach(({ name, x, y }) => {
         ctx.beginPath();
         ctx.fillStyle = "blue";
         ctx.fillRect(x, y + 4, 100, 14);

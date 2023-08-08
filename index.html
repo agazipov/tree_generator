@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canvas</title>
 </head>
+
 <body>
     <div>
         <button id="addChild">Add child</button>
@@ -13,7 +15,11 @@
         <button id="clear">Clear</button>
     </div>
     <div>
-        <button id="getReq">Response</button>
+        <button id="gitReq">Response</button>
+        <input type="text" id="urlImput" autocomplete="off">
+        <select name="urlSelector" id="urlSelector">
+        </select>
+        <button id="gitPanel">GitPanel</button>
     </div>
     <div>
         <canvas id="myCanvas" width="700" height="500" style="background-color: grey;"></canvas>
@@ -34,4 +40,5 @@
     <script type="module" src="/script.js"></script>
     <script type="module" src="/fileSaver.js"></script>
 </body>
+
 </html>
