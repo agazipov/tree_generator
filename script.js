@@ -23,7 +23,9 @@ class Container {
         this.width = width;
         this.height = height;
         this.x = x;
+        this.startX = x;
         this.y = y;
+        this.startY = y;
         this.id = id;
         this.isDrag = false;
         this.isActiv = isActiv;
@@ -41,7 +43,6 @@ class Container {
 const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0, 'root');
 
 const containers = [root];
-let mask = containers.map((container) => ({ ...container }));
 changeInput.value = containers[0].title;
 let activContainer = root;
 let gitBlob = [];
@@ -62,10 +63,9 @@ let dragIndex = null;
 
 // генерация на отрисовку
 function motion() {
-    mask = containers.map((container) => ({ ...container })); // * вынести в другое место или выполнять один раз перед началом перетаскивания
-    mask.forEach((container) => {
-        container.x = (container.x + offsetX) * scale;
-        container.y = (container.y + offsetY) * scale;
+    containers.forEach((container) => {
+        container.x = (container.startX + offsetX) * scale;
+        container.y = (container.startY + offsetY) * scale;
         container.width *= scale;
         container.height *= scale;
     });
@@ -99,31 +99,43 @@ function serchParam(param, arr, property) {
     return value;
 };
 
+// макс в массиве
+function maxNumInArr(arr, width) {
+    let value = 0, newWidth = width;
+    arr.forEach((element) => {
+        if (element > value) {
+            value = element;
+        };
+    });
+    if (value > 7) {
+        return newWidth = ((value - 7) * 100) + width;
+    }
+    return newWidth;
+};
+
+// считаем дитей
+function childNumber(arr) {
+    let value = 0;
+    arr.forEach((element) => {
+        if (element.child.length > 3) {
+            value = value + element.child.length - 3;
+        };
+    });
+    return value;
+};
+
 // сортировка массива
+let newWidth = rect.width;
 function sortContainers(arr, activ) {
     // считаем сколько элементов на уровне
     let map = [];
-    let map2 = [];
-    let parentNumber = 0;
+    newWidth = rect.width + (childNumber(arr) * 150);
     arr.forEach((container) => {
         if (!map[container.level - 1]) {
             map[container.level - 1] = 0;
-        }
+        };
         map[container.level - 1] += 1;
-
-        if (!map2[container.level - 1]) {
-            map2[container.level - 1] = 0;
-        }
-        map2[container.level - 1] = rect.width * (1 + 0.1 * map[container.level - 1]);
-
-
-        // if (container.level === activ.level) {
-        //     parentNumber += 1;
-        // }
     });
-    console.log(map2);
-    // возможна ошибка в выборе ширины как дефолта (надо обращатся к род контенеру)
-    let widthFromParent = (rect.width / parentNumber); // значение выделенное под один элемент в зависимости от кол-ва родителей
 
     // сортировка контейнеров на своем уровне по родительскому индексу
     arr.sort((a, b) => {
@@ -143,20 +155,12 @@ function sortContainers(arr, activ) {
             count += 1;
         }
 
-        if (container.level === 2) {
-            container.x = ((rect.width / root.child.length + 1) * root.child.indexOf(container.id)) + 30;
-        }
-        if (container.level !== 1 && container.level !== 2) {
-            // container.localIndex = count;
-            // count += 1;
-            // container.x = ((rect.width / (levelQuantity + 1)) * (container.localIndex)); // растягивание по ширене уровня
-
+        if (container.level !== 1) {
+            // растягивание по ширине уровня
             let parentContainer = serchParam(container.parentId, arr, 'id');
-            container.x = ((rect.width / map[container.level - 1]) / parentContainer.child.length *
-                parentContainer.child.indexOf(container.id))
-                + parentContainer.x; // растягивание по ширене уровня
-            // + container.parentIndex * widthFromParent + 30; // старая реализация
-            console.log(`container ${container.globalIndex}`, container.x);
+            container.startX = ((newWidth / (parentContainer.child.length + 1)) / map[container.level - 2] * // map[container.level - 2] - колво элементов на уровне активного контейнера
+                (parentContainer.child.indexOf(container.id) + 1))
+                + (parentContainer.startX - ((newWidth / map[container.level - 2]) / 2)); 
         }
     });
 
@@ -254,7 +258,7 @@ canvas.addEventListener("click", (event) => {
 
     // Проверяем объекты на пересечение с кликом
     activContainer = null;
-    mask.forEach((object) => {
+    containers.forEach((object) => {
         if (
             clickX >= object.x &&
             clickX <= object.x + object.width &&
@@ -304,6 +308,7 @@ canvas.addEventListener('mousedown', (event) => {
         startDragX = event.clientX;
         startDragY = event.clientY;
     }
+
     // перемещаем гитовые элементы
     gitBlob.forEach((element, index) => {
         if (
@@ -326,6 +331,7 @@ canvas.addEventListener('mousemove', (event) => {
         startDragY = event.clientY;
         offsetX += dx;
         offsetY += dy;
+        console.log(startDragX);
     };
 
     dragIndex && (gitBlob[dragIndex].x = event.clientX - rect.left - 50);
@@ -334,8 +340,6 @@ canvas.addEventListener('mousemove', (event) => {
     motion();
 });
 canvas.addEventListener('mouseup', (event) => {
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
     };
@@ -435,11 +439,11 @@ urlSelector.addEventListener('change', (event) => {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
 
-    mask.forEach(container => {
+    containers.forEach(container => {
         // отрисовываем линии
         container.child.forEach((childId) => {
             // поиск дочерних у родителя на нижнем уровне
-            const findContainer = mask.find((container) => container.id === childId);
+            const findContainer = containers.find((container) => container.id === childId);
             if (findContainer) {
                 ctx.beginPath();
                 ctx.moveTo(container.x + 23, container.y + 9);
