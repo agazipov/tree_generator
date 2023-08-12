@@ -19,7 +19,7 @@ const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Container {
-    constructor(width, height, x, y, level, id, isActiv, parentId, parentIndex, title) {
+    constructor(width, height, x, y, level, id, isActiv, parentId, title) {
         this.width = width;
         this.height = height;
         this.x = x;
@@ -33,14 +33,12 @@ class Container {
         this.level = level;
         this.child = [];
         this.parentId = parentId;
-        this.localIndex = 0;
         this.globalIndex = 0;
-        this.parentIndex = parentIndex;
         this.title = title;
     }
 };
 
-const root = new Container(46, 18, rect.width / 2, 20, 1, nanoid(), true, null, 0, 'root');
+const root = new Container(46, 18, rect.width / 2 - 23, 20, 1, nanoid(), true, null, 0, 'root');
 
 const containers = [root];
 changeInput.value = containers[0].title;
@@ -63,9 +61,16 @@ let dragIndex = null;
 
 // генерация на отрисовку
 function motion() {
+    // версия для старогосмещения
+    // containers.forEach((container) => {
+    //     container.x = (container.startX + offsetX) * scale;
+    //     container.y = (container.startY + offsetY) * scale;
+    //     container.width *= scale;
+    //     container.height *= scale;
+    // });
     containers.forEach((container) => {
-        container.x = (container.startX + offsetX) * scale;
-        container.y = (container.startY + offsetY) * scale;
+        container.x = container.startX * scale;
+        container.y = container.startY * scale;
         container.width *= scale;
         container.height *= scale;
     });
@@ -74,7 +79,7 @@ function motion() {
 
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewContainer(parent, title) {
-    let width, height, x, y, level, id, isActiv, parentId, parentIndex;
+    let width, height, x, y, level, id, isActiv, parentId;
 
     id = nanoid();
     parent.child.push(id); // добавляем ид дочернего в родителя
@@ -84,10 +89,9 @@ function createNewContainer(parent, title) {
     y = 75 * parent.level;
     level = parent.level + 1;
     parentId = parent.id
-    parentIndex = parent.localIndex;
     isActiv = false;
 
-    return new Container(width, height, x, y, level, id, isActiv, parentId, parentIndex, title);
+    return new Container(width, height, x, y, level, id, isActiv, parentId, title);
 };
 
 // поиск контейнера по заданным параметрам
@@ -126,7 +130,7 @@ function childNumber(arr) {
 
 // сортировка массива
 let newWidth = rect.width;
-function sortContainers(arr, activ) {
+function sortContainers(arr) {
     // считаем сколько элементов на уровне
     let map = [];
     newWidth = rect.width + (childNumber(arr) * 150);
@@ -137,38 +141,18 @@ function sortContainers(arr, activ) {
         map[container.level - 1] += 1;
     });
 
-    // сортировка контейнеров на своем уровне по родительскому индексу
-    arr.sort((a, b) => {
-        if (a.parentIndex > b.parentIndex) { return 1; }
-        if (a.parentIndex < b.parentIndex) { return -1; }
-        return 0;
-    });
-
     // переназначение индекса контейнера
     let count = 0;
-    arr.forEach((container, index) => {
+    arr.forEach((container, index, arr) => {
         container.globalIndex = index; // для удаления элемента
-        // пересчет локального индекса от активного контейнера
-        // * пересчет при удалениии!!!
-        if (container.level === activ.level + 1) {
-            container.localIndex = count;
-            count += 1;
-        }
 
         if (container.level !== 1) {
             // растягивание по ширине уровня
             let parentContainer = serchParam(container.parentId, arr, 'id');
             container.startX = ((newWidth / (parentContainer.child.length + 1)) / map[container.level - 2] * // map[container.level - 2] - колво элементов на уровне активного контейнера
                 (parentContainer.child.indexOf(container.id) + 1))
-                + (parentContainer.startX - ((newWidth / map[container.level - 2]) / 2)); 
+                + (parentContainer.startX - ((newWidth / map[container.level - 2]) / 2));
         }
-    });
-
-    // отдельный цикл так как если добавлять элемент с индексом в середину то не обновится последний элемент
-    // проверка актуального родительского индекса
-    arr.forEach((container) => {
-        let serchParentId = serchParam(container.parentId, arr, 'id');
-        container.parentIndex = serchParentId ? serchParentId.localIndex : 0;
     });
 };
 
@@ -182,7 +166,7 @@ buttonChild.addEventListener("click", () => {
     let obj = createNewContainer(activContainer, 'Name');
 
     containers.push(obj);
-    sortContainers(containers, activContainer);
+    sortContainers(containers);
 
     motion();
 });
@@ -209,7 +193,7 @@ buttonDelete.addEventListener("click", () => {
     let serchParent = serchParam(activContainer.parentId, containers, 'id');
     containers[serchParent.globalIndex].child = containers[serchParent.globalIndex].child.filter((child) => activContainer.id !== child);
 
-    sortContainers(containers, containers[serchParent.globalIndex]);
+    sortContainers(containers);
     motion();
 });
 
@@ -253,8 +237,8 @@ decreaseScale.addEventListener("click", () => {
 
 // активная кнопка
 canvas.addEventListener("click", (event) => {
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
+    const clickX = event.clientX - rect.left - offsetX;
+    const clickY = event.clientY - rect.top - offsetY;
 
     // Проверяем объекты на пересечение с кликом
     activContainer = null;
@@ -331,13 +315,16 @@ canvas.addEventListener('mousemove', (event) => {
         startDragY = event.clientY;
         offsetX += dx;
         offsetY += dy;
-        console.log(startDragX);
+        draw(dx, dy);
     };
 
-    dragIndex && (gitBlob[dragIndex].x = event.clientX - rect.left - 50);
-    dragIndex && (gitBlob[dragIndex].y = event.clientY - rect.top - 8);
+    if (dragIndex) {
+        gitBlob[dragIndex].x = event.clientX - rect.left - 50;
+        gitBlob[dragIndex].y = event.clientY - rect.top - 8;
+        draw();
+    };
 
-    motion();
+    // motion();
 });
 canvas.addEventListener('mouseup', (event) => {
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
@@ -355,7 +342,7 @@ canvas.addEventListener('mouseup', (event) => {
             let obj = createNewContainer(activContainer, gitBlob[dragIndex].name);
 
             containers.push(obj);
-            sortContainers(containers, activContainer);
+            sortContainers(containers);
 
             motion();
         };
@@ -436,8 +423,12 @@ urlSelector.addEventListener('change', (event) => {
 });
 
 // функция рисования
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем холст
+function draw(x, y) {
+    ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width, canvas.height); // Очищаем холст
+    (x || y) && ctx.translate(x, y);
+    console.log(`render`);
+
+    drawGrid();
 
     containers.forEach(container => {
         // отрисовываем линии
@@ -506,8 +497,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    ctx.fillText(title, x + 6, y + 12);
-    // ctx.fillText(globalIndex, x + 6, y + 12);
+    // ctx.fillText(title, x + 6, y + 12);
+    ctx.fillText(globalIndex, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
@@ -525,6 +516,27 @@ function infoRect(x, y, radius, open = false) {
     ctx.textAlign = "center"; // выравнивание текста по центру
     ctx.fillText(open ? "X" : "!", x, y + 5); // рисует текст в указанных координатах
     ctx.closePath();
+};
+
+// сеточка
+const gridSize = 100; // размер ячейки сетки
+function drawGrid() {
+    ctx.beginPath();
+    ctx.strokeStyle = '#ccc';
+
+    // рисуем вертикальные линии
+    for (let x = 0 - offsetX; x <= canvas.width - offsetX; x += gridSize) {
+        ctx.moveTo(x, 0 - offsetY);
+        ctx.lineTo(x, canvas.height - offsetY);
+        ctx.stroke();
+    };
+
+    // рисуем горизонтальные линии
+    for (let y = 0 - offsetY; y <= canvas.height - offsetY; y += gridSize) {
+        ctx.moveTo(0 - offsetX, y);
+        ctx.lineTo(canvas.width - offsetX, y);
+        ctx.stroke();
+    };
 };
 
 draw();
