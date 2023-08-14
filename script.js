@@ -1,25 +1,35 @@
 let nanoid = (t = 21) => crypto.getRandomValues(new Uint8Array(t)).reduce(((t, e) => t += (e &= 63) < 36 ? e.toString(36) : e < 62 ? (e - 26).toString(36).toUpperCase() : e > 62 ? "-" : "_"), "");
 
+//  структура
 const buttonChild = document.getElementById("addChild");
 const buttonDelete = document.getElementById("delContainer");
 const buttonClear = document.getElementById("clear");
+// редактирование заголовка
 const changeInput = document.getElementById("changeInput");
 const changeButton = document.getElementById("changeButton");
+// масштаб
 const increaseScale = document.getElementById("increaseScale");
 const decreaseScale = document.getElementById("decreaseScale");
 const spanScale = document.getElementById("spanScale");
+// ширина
+const increaseWidth = document.getElementById("increaseWidth");
+const decreaseWidth = document.getElementById("decreaseWidth");
+const spanWidth = document.getElementById("spanWidth");
+// файлы
 const saveButton = document.getElementById("saveButton");
 const file = document.getElementById("file");
+// гит
 const gitReq = document.getElementById("gitReq");
 const urlImput = document.getElementById("urlImput");
 const urlSelector = document.getElementById("urlSelector");
 const gitPanel = document.getElementById("gitPanel");
+// канвас
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 
 class Container {
-    constructor(width, height, x, y, level, id, isActiv, parentId, title) {
+    constructor(width, height, y, x, level, id, isActiv, parentId, title) {
         this.width = width;
         this.height = height;
         this.x = x;
@@ -38,13 +48,14 @@ class Container {
     }
 };
 
-const root = new Container(46, 18, rect.width / 2 - 23, 20, 1, nanoid(), true, null, 0, 'root');
+const root = new Container(46, 18, rect.height / 2 - 23, 20, 1, nanoid(), true, 0, 'root');
 
 const containers = [root];
 changeInput.value = containers[0].title;
 let activContainer = root;
 let gitBlob = [];
 let gitTree = [];
+let factorWidth = 1;
 
 // переменные масштабирования
 let scale = 1;
@@ -61,16 +72,12 @@ let dragIndex = null;
 
 // генерация на отрисовку
 function motion() {
-    // версия для старогосмещения
-    // containers.forEach((container) => {
-    //     container.x = (container.startX + offsetX) * scale;
-    //     container.y = (container.startY + offsetY) * scale;
-    //     container.width *= scale;
-    //     container.height *= scale;
-    // });
     containers.forEach((container) => {
         container.x = container.startX * scale;
         container.y = container.startY * scale;
+        // версия для старого смещения
+        //     container.x = (container.startX + offsetX) * scale;
+        //     container.y = (container.startY + offsetY) * scale;
         container.width *= scale;
         container.height *= scale;
     });
@@ -85,13 +92,13 @@ function createNewContainer(parent, title) {
     parent.child.push(id); // добавляем ид дочернего в родителя
     width = 46;
     height = 18;
-    x = 75;
-    y = 75 * parent.level;
+    x = 75 * parent.level;
+    y = 75;
     level = parent.level + 1;
     parentId = parent.id
     isActiv = false;
 
-    return new Container(width, height, x, y, level, id, isActiv, parentId, title);
+    return new Container(width, height, y, x, level, id, isActiv, parentId, title);
 };
 
 // поиск контейнера по заданным параметрам
@@ -117,7 +124,7 @@ function maxNumInArr(arr, width) {
     return newWidth;
 };
 
-// считаем дитей
+// считаем детей
 function childNumber(arr) {
     let value = 0;
     arr.forEach((element) => {
@@ -133,26 +140,29 @@ let newWidth = rect.width;
 function sortContainers(arr) {
     // считаем сколько элементов на уровне
     let map = [];
-    newWidth = rect.width + (childNumber(arr) * 150);
+    newWidth = rect.height + (factorWidth * 150);
     arr.forEach((container) => {
         if (!map[container.level - 1]) {
             map[container.level - 1] = 0;
         };
+        if (map[container.level - 1] < map[container.level - 2]) {
+            map[container.level - 1] = map[container.level - 2];
+        }
         map[container.level - 1] += 1;
     });
 
     // переназначение индекса контейнера
-    let count = 0;
     arr.forEach((container, index, arr) => {
         container.globalIndex = index; // для удаления элемента
 
         if (container.level !== 1) {
             // растягивание по ширине уровня
             let parentContainer = serchParam(container.parentId, arr, 'id');
-            container.startX = ((newWidth / (parentContainer.child.length + 1)) / map[container.level - 2] * // map[container.level - 2] - колво элементов на уровне активного контейнера
-                (parentContainer.child.indexOf(container.id) + 1))
-                + (parentContainer.startX - ((newWidth / map[container.level - 2]) / 2));
-        }
+            container.startY = 
+                ((newWidth / (parentContainer.child.length + 1)) / map[container.level - 2] // map[container.level - 2] - колво элементов на уровне активного контейнера
+                * (parentContainer.child.indexOf(container.id) + 1)) 
+                + (parentContainer.startY - ((newWidth / map[container.level - 2]) / 2));
+        };
     });
 };
 
@@ -234,6 +244,19 @@ decreaseScale.addEventListener("click", () => {
     spanScale.innerText = scale;
     motion();
 });
+// изменение ширины
+increaseWidth.addEventListener("click", () => {
+    factorWidth += 1;
+    spanWidth.innerText = factorWidth;
+    sortContainers(containers);
+    motion();
+});
+decreaseWidth.addEventListener("click", () => {
+    factorWidth -= 1;
+    spanWidth.innerText = factorWidth;
+    sortContainers(containers);
+    motion();
+});
 
 // активная кнопка
 canvas.addEventListener("click", (event) => {
@@ -262,22 +285,22 @@ canvas.addEventListener("click", (event) => {
             serchParam(object.id, containers, 'id').isActiv = false;
         };
         // кlик по плашке инфо
-        if (
-            clickX >= object.x + 44 &&
-            clickX <= object.x + 56 &&
-            clickY >= object.y - 3 &&
-            clickY <= object.y + 9
-        ) {
-            object.isOpen = true;
-        };
-        if (
-            clickX >= object.x + 74 &&
-            clickX <= object.x + 86 &&
-            clickY >= object.y - 3 &&
-            clickY <= object.y + 9
-        ) {
-            object.isOpen = false;
-        };
+        // if (
+        //     clickX >= object.x + 44 &&
+        //     clickX <= object.x + 56 &&
+        //     clickY >= object.y - 3 &&
+        //     clickY <= object.y + 9
+        // ) {
+        //     object.isOpen = true;
+        // };
+        // if (
+        //     clickX >= object.x + 74 &&
+        //     clickX <= object.x + 86 &&
+        //     clickY >= object.y - 3 &&
+        //     clickY <= object.y + 9
+        // ) {
+        //     object.isOpen = false;
+        // };
     });
     draw();
 });
@@ -302,6 +325,7 @@ canvas.addEventListener('mousedown', (event) => {
             clickY <= element.y + 16
         ) {
             dragIndex = index;
+            console.log(dragIndex);
             savePositionX = element.x;
             savePositionY = element.y;
         };
@@ -318,38 +342,38 @@ canvas.addEventListener('mousemove', (event) => {
         draw(dx, dy);
     };
 
-    if (dragIndex) {
+    if (dragIndex !== null) {
         gitBlob[dragIndex].x = event.clientX - rect.left - 50;
         gitBlob[dragIndex].y = event.clientY - rect.top - 8;
         draw();
     };
-
-    // motion();
 });
 canvas.addEventListener('mouseup', (event) => {
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
     };
 
-    dragIndex && containers.forEach((element) => {
-        if (
-            gitBlob[dragIndex].x + 50 >= element.x &&
-            gitBlob[dragIndex].x + 50 <= element.x + 100 &&
-            gitBlob[dragIndex].y + 8 >= element.y &&
-            gitBlob[dragIndex].y + 8 <= element.y + 16
-        ) {
-            activContainer = element;
-            let obj = createNewContainer(activContainer, gitBlob[dragIndex].name);
+    if (dragIndex !== null) {
+        containers.forEach((element) => {
+            if (
+                gitBlob[dragIndex].x + 50 >= element.x &&
+                gitBlob[dragIndex].x + 50 <= element.x + 100 &&
+                gitBlob[dragIndex].y + 8 >= element.y &&
+                gitBlob[dragIndex].y + 8 <= element.y + 16
+            ) {
+                activContainer = element;
+                let obj = createNewContainer(activContainer, gitBlob[dragIndex].name);
 
-            containers.push(obj);
-            sortContainers(containers);
+                containers.push(obj);
+                sortContainers(containers);
 
-            motion();
-        };
-    });
-    dragIndex && (gitBlob[dragIndex].x = savePositionX);
-    dragIndex && (gitBlob[dragIndex].y = savePositionY);
-    dragIndex = null;
+                motion();
+            };
+        });
+        gitBlob[dragIndex].x = savePositionX;
+        gitBlob[dragIndex].y = savePositionY
+        dragIndex = null;
+    };
 });
 
 // открываем/скрываем панель элементов гита
@@ -414,7 +438,7 @@ urlSelector.addEventListener('change', (event) => {
         .then((response) => response.json())
         .then((data) => {
             gitBlob = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
-                return { name: path.substr(path.lastIndexOf('/') + 1), x: 600, y: index * 15 };
+                return { name: path.substr(path.lastIndexOf('/') + 1), x: canvas.width - 100, y: index * 15 };
                 // return path.includes('/') ? path.substr(path.lastIndexOf('/') + 1) : path;
             });
             console.log(gitBlob);
@@ -426,7 +450,6 @@ urlSelector.addEventListener('change', (event) => {
 function draw(x, y) {
     ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width, canvas.height); // Очищаем холст
     (x || y) && ctx.translate(x, y);
-    console.log(`render`);
 
     drawGrid();
 
@@ -448,19 +471,23 @@ function draw(x, y) {
 
         // отрисовываем контейнеры
         if (container.isOpen) {
-            roundedRect(container, container.width + 30, container.height + 30, 7);
-            infoRect(container.x + 80, container.y + 3, 6, true);
+            roundedRect(container, container.width + 30, container.height + 30);
+            // infoRect(container.x + 80, container.y + 3, 6, true);
         } else {
             roundedRect(container, container.width, container.height, 5);
-            infoRect(container.x + 50, container.y + 3, 6);
+            // infoRect(container.x + 50, container.y + 3, 6);
         };
     });
 
     openGitPanel && gitBlob.forEach(({ name, x, y }) => {
         ctx.beginPath();
-        ctx.fillStyle = "blue";
+        ctx.fillStyle = "black";
+        ctx.fillRect(x - 2, y + 2, 104, 16);
+        ctx.clearRect(x, y + 4, 100, 14);
+        ctx.fillStyle = "#ADADAD";
         ctx.fillRect(x, y + 4, 100, 14);
         ctx.fill();
+        ctx.font = "bold 12px arial";
         ctx.fillStyle = "black";
         ctx.textAlign = "start";
         ctx.fillText(name, x + 10, y + 15);
@@ -470,19 +497,18 @@ function draw(x, y) {
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width, height, borderRadius) {
+function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
-    ctx.moveTo(x + borderRadius, y); // Начало пути в верхнем левом углу прямоугольника
-    ctx.lineTo(x + width - borderRadius, y); // Рисуем линию от левого верхнего угла до правого верхнего угла
-    ctx.arcTo(x + width, y, x + width, y + borderRadius, borderRadius); // Создаем скругление в верхнем правом углу
-    ctx.lineTo(x + width, y + height - borderRadius); // Рисуем линию в правый нижний угол
-    ctx.arcTo(x + width, y + height, x + width - borderRadius, y + height, borderRadius); // Создаем скругление в нижнем правом углу
-    ctx.lineTo(x + borderRadius, y + height); // Рисуем линию в нижний левый угол
-    ctx.arcTo(x, y + height, x, y + height - borderRadius, borderRadius); // Создаем скругление в нижнем левом углу
-    ctx.lineTo(x, y + borderRadius); // Рисуем линию в левый верхний угол
-    ctx.arcTo(x, y, x + borderRadius, y, borderRadius); // Создаем скругление в верхнем левом углу
-    ctx.closePath(); // Закончите путь
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    ctx.moveTo(x, y); // Начало пути в верхнем левом углу прямоугольника
+    ctx.lineTo(x + width, y); // Рисуем линию от левого верхнего угла до правого верхнего угла
+    ctx.lineTo(x + width, y + height); // Рисуем линию в правый нижний угол
+    ctx.lineTo(x, y + height); // Рисуем линию в нижний левый угол
+    ctx.lineTo(x, y); // Рисуем линию в левый верхний угол
+    ctx.stroke(); // Закончите путь
 
     // ctx.fillRect(x, y, width, height);
 
@@ -497,8 +523,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    // ctx.fillText(title, x + 6, y + 12);
-    ctx.fillText(globalIndex, x + 6, y + 12);
+    ctx.fillText(title, x + 6, y + 12);
+    // ctx.fillText(globalIndex, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
