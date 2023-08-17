@@ -32,9 +32,10 @@ class Container {
     constructor(width, height, y, x, level, id, isActiv, parentId, title) {
         this.width = width;
         this.height = height;
+        this.area = 500;
         this.x = x;
-        this.startX = x;
         this.y = y;
+        this.startX = x;
         this.startY = y;
         this.id = id;
         this.isDrag = false;
@@ -136,11 +137,66 @@ function childNumber(arr) {
 };
 
 // сортировка массива
-let newWidth = rect.width;
+let newHeight = rect.height;
 function sortContainers(arr) {
+    // реализация компоновки с распределением от количеста детей
+    // приоритет компонента в зависимости от кол-ва дейтей
+    arr.forEach((container, _index, arr) => {
+        container.priority = 1;
+        arr.forEach((container2) => {
+            if (container.parentId === container2.parentId) {
+                if (container.child.length > container2.child.length) {
+                    container.priority += 1;
+                };
+            };
+        });
+    });
+    // сумма приоритетов для конкретного элемента
+    arr.forEach((container) => {
+        let count = 0;
+        if (container.child.length !== 0) {
+            container.child.forEach((child, index) => {
+                let childContainer = serchParam(child, arr, 'id');
+                count += childContainer.priority;
+            });
+            container.child.forEach((child, index) => {
+                let childContainer = serchParam(child, arr, 'id');
+                childContainer.areaPriority = count;
+            });
+        };
+    });
+    // расчет зоны контейнера в зависимости от его уровня приоритета (за основу берется зона родительского контейнера)
+    arr.forEach((container) => {
+        let parentContainer = serchParam(container.parentId, arr, 'id');
+        if (container.level !== 1) {
+            container.area = parentContainer.area / (container.areaPriority) * container.priority;
+        }
+    });
+    // расчет координаты при разных зонах контейнера
+    arr.forEach((container) => {
+        let count = 0;
+        if (container.child.length !== 0) {
+            container.child.forEach((child, index) => {
+                let childContainer = serchParam(child, arr, 'id');
+                count += childContainer.area / 2;
+                childContainer.startY = (container.startY - (container.area / 2)) + count;
+                count += childContainer.area / 2;
+            });
+        };
+    });
+    // при равномерной зоне контейнеров
+    arr.forEach((container) => {
+        let parentContainer = serchParam(container.parentId, arr, 'id');
+        if (container.level === 100) {
+            let widthElement = parentContainer.area / parentContainer.child.length;
+            container.startY = (parentContainer.startY - (parentContainer.area / 2)) + (widthElement * parentContainer.child.indexOf(container.id)) + (widthElement / 2);
+        };
+    });
+
+    // старая реализация с равномерным распределением от ширины
     // считаем сколько элементов на уровне
     let map = [];
-    newWidth = rect.height + (factorWidth * 150);
+    newHeight = rect.height + (factorWidth * 150);
     arr.forEach((container) => {
         if (!map[container.level - 1]) {
             map[container.level - 1] = 0;
@@ -150,18 +206,17 @@ function sortContainers(arr) {
         }
         map[container.level - 1] += 1;
     });
-
-    // переназначение индекса контейнера
     arr.forEach((container, index, arr) => {
         container.globalIndex = index; // для удаления элемента
 
-        if (container.level !== 1) {
+        if (container.level === 100) {
             // растягивание по ширине уровня
             let parentContainer = serchParam(container.parentId, arr, 'id');
-            container.startY = 
-                ((newWidth / (parentContainer.child.length + 1)) / map[container.level - 2] // map[container.level - 2] - колво элементов на уровне активного контейнера
-                * (parentContainer.child.indexOf(container.id) + 1)) 
-                + (parentContainer.startY - ((newWidth / map[container.level - 2]) / 2));
+
+            container.startY =
+                ((newHeight / (parentContainer.child.length + 1)) / map[container.level - 2]
+                    * (parentContainer.child.indexOf(container.id) + 1))
+                + (parentContainer.startY - ((newHeight / map[container.level - 2]) / 2));
         };
     });
 };
@@ -497,7 +552,7 @@ function draw(x, y) {
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height) {
+function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
     ctx.strokeStyle = 'black';
@@ -523,8 +578,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child }, width, height) {
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    ctx.fillText(title, x + 6, y + 12);
-    // ctx.fillText(globalIndex, x + 6, y + 12);
+    // ctx.fillText(title, x + 6, y + 12);
+    ctx.fillText(globalIndex, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
