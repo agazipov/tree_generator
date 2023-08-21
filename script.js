@@ -27,6 +27,7 @@ const gitPanel = document.getElementById("gitPanel");
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
+const elementInfo = document.getElementsByClassName("elementInfo_text");
 
 class Container {
     constructor(width, height, y, x, level, id, isActiv, parentId, title) {
@@ -38,6 +39,7 @@ class Container {
         this.startX = x;
         this.startY = y;
         this.id = id;
+        this.isBranch = false;
         this.isDrag = false;
         this.isActiv = isActiv;
         this.isOpen = false;
@@ -314,12 +316,49 @@ decreaseWidth.addEventListener("click", () => {
 });
 
 // активная кнопка
+// поиск ветки
+function serchBranch(container) {
+    if (!container) {
+        containers.forEach((container) => container.isBranch = false);
+    } else {
+        let parentContainer = serchParam(container.parentId, containers, 'id');
+        if (!parentContainer) {
+            return;
+        };
+        parentContainer.isBranch = true;
+        serchBranch(parentContainer);
+    };
+};
+// вывод инфы об активном контенере 
+function handleActivContainer(object) {
+    if (object === null) {
+        activContainer = object;
+        elementInfo[0].innerHTML = '';
+        return;
+    };
+    activContainer = object;
+    const nameArray = ['title', 'id', 'globalIndex', 'branch'] // ** фиксировать изменения из change
+    for (let index = 0; index < nameArray.length; index++) {
+        if (nameArray[index] === 'branch') {
+            const branchName = containers.filter((el) => el.isBranch === true).map(el => el.id).join(', \n');
+            const property = document.createElement('li');
+            property.textContent = `Branch: \n ${branchName}`;
+            elementInfo[0].insertAdjacentElement('beforeend', property);
+        } else {
+            const property = document.createElement('li');
+            property.textContent = `${nameArray[index]}: ` + activContainer[nameArray[index]];
+            elementInfo[0].insertAdjacentElement('beforeend', property);
+        };
+    };
+};
+handleActivContainer(root);
 canvas.addEventListener("click", (event) => {
     const clickX = event.clientX - rect.left - offsetX;
     const clickY = event.clientY - rect.top - offsetY;
 
     // Проверяем объекты на пересечение с кликом
-    activContainer = null;
+    handleActivContainer(null);
+    serchBranch(null); // ** не выполнять при повторных кликах
     containers.forEach((object) => {
         if (
             clickX >= object.x &&
@@ -329,15 +368,12 @@ canvas.addEventListener("click", (event) => {
         ) {
             // Обработка клика на объекте
             object.isActiv ? // при повторном клике
-                (object.isActiv = false, changeInput.value = "", activContainer = null)
+                (object.isActiv = false, changeInput.value = "")
                 :
-                (object.isActiv = true, changeInput.value = object.title, activContainer = object);
-
-            serchParam(object.id, containers, 'id').isActiv = true;
+                (object.isActiv = true, changeInput.value = object.title, serchBranch(object), handleActivContainer(object));
             console.log(`activContainer`, object);
         } else {
             object.isActiv = false;
-            serchParam(object.id, containers, 'id').isActiv = false;
         };
         // кlик по плашке инфо
         // if (
@@ -365,7 +401,7 @@ let savePositionX, savePositionY;
 canvas.addEventListener('mousedown', (event) => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
-    if (event.button === 3) { // Проверяем нажатие правой кнопки мыши
+    if (event.button === 0) { // Проверяем нажатие правой кнопки мыши
         isDragging = true;
         startDragX = event.clientX;
         startDragY = event.clientY;
@@ -404,7 +440,7 @@ canvas.addEventListener('mousemove', (event) => {
     };
 });
 canvas.addEventListener('mouseup', (event) => {
-    if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
+    if (event.button === 0) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
     };
 
@@ -517,7 +553,7 @@ function draw(x, y) {
                 ctx.beginPath();
                 ctx.moveTo(container.x + 23, container.y + 9);
                 ctx.lineTo(findContainer.x + 23, findContainer.y + 9);
-                ctx.strokeStyle = 'black';
+                (findContainer.isBranch || findContainer.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.closePath();
@@ -552,7 +588,7 @@ function draw(x, y) {
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width, height) {
+function roundedRect({ x, y, isActiv, isBranch, isOpen, child, globalIndex }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
     ctx.strokeStyle = 'black';
@@ -570,6 +606,8 @@ function roundedRect({ x, y, isActiv, title, isOpen, child, globalIndex }, width
     // Заполните прямоугольник с заданным цветом
     if (isActiv) {
         ctx.fillStyle = "red";
+    } else if (isBranch) {
+        ctx.fillStyle = "green";
     } else {
         ctx.fillStyle = 'white';
     };

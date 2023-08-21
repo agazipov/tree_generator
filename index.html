@@ -5,43 +5,69 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css" type="text/css" />
     <title>Canvas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
 </head>
 
 <body>
-    <div>
-        <button id="addChild">Add child</button>
-        <button id="delContainer">Delete Container</button>
-        <button id="clear">Clear</button>
+    <div class="wrap">
+        <header class="header">
+            <h2>TreeGenerator</h2>
+        </header>
+
+        <main class="main">
+            <div class="controlPanel">
+                <div class="mb-3 mt-3">
+                    <button id="addChild" type="button" class="btn btn-primary btn-sm">Add child</button>
+                    <button id="delContainer" type="button" class="btn btn-primary btn-sm">Delete Container</button>
+                    <button id="clear" type="button" class="btn btn-primary btn-sm">Clear</button>
+                </div>
+                <div class="widthContainer mb-3">
+                    <span>Factor Width: <span id="spanWidth">1</span></span>
+                    <button id="increaseWidth" class="btn btn-primary btn-sm">+</button>
+                    <button id="decreaseWidth" class="btn btn-primary btn-sm">-</button>
+                </div>
+                <div class="gitContainer mb-3">
+                    <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
+                    <input type="text" id="urlImput" autocomplete="off">
+                    <select name="urlSelector" id="urlSelector" class="form-select form-select-sm" aria-label="Small select example">
+                    </select>
+                    <button id="gitPanel" class="btn btn-primary btn-sm">GitPanel</button>
+                </div>
+                <div class="changeContainer mb-3">
+                    <input type="text" id="changeInput" autocomplete="off">
+                    <button id="changeButton" class="btn btn-primary btn-sm">Change</button>
+                </div>
+                <div class="scaleCpntainer  mb-3">
+                    <span>Scale: <span id="spanScale">1</span></span>
+                    <button id="increaseScale" class="btn btn-primary btn-sm">+</button>
+                    <button id="decreaseScale" class="btn btn-primary btn-sm">-</button>
+                </div>
+                <div class="saveFileContainer">
+                    <label for="file" class="form-label">Upload your tree (.json)</label>
+                    <input type="file" id="file" class="form-control form-control-sm">
+                    <button id="saveButton" class="btn btn-primary btn-sm">Save</button>
+                </div>
+            </div>
+
+            <canvas id="myCanvas" width="500" height="500" style="background-color: grey;" ></canvas>
+
+            <div class="infoPanel">
+                <h3>Element Info</h3>
+                <ul class="elementInfo_text"></ul>
+            </div>
+        </main>
+
+        <!-- <footer class="footer">
+            <p>test</p>
+        </footer> -->
     </div>
-    <div>
-        <span>Factor Width: <span id="spanWidth">1</span></span>
-        <button id="increaseWidth">+</button>
-        <button id="decreaseWidth">-</button>
-    </div>
-    <div>
-        <button id="gitReq">Response</button>
-        <input type="text" id="urlImput" autocomplete="off">
-        <select name="urlSelector" id="urlSelector">
-        </select>
-        <button id="gitPanel">GitPanel</button>
-    </div>
-    <div>
-        <canvas id="myCanvas" width="800" height="500" style="background-color: grey;"></canvas>
-    </div>
-    <div>
-        <input type="text" id="changeInput" autocomplete="off">
-        <button id="changeButton">Change</button>
-    </div>
-    <div>
-        <span>Scale: <span id="spanScale">1</span></span>
-        <button id="increaseScale">+</button>
-        <button id="decreaseScale">-</button>
-    </div>
-    <div>
-        <input type="file" id="file">
-        <button id="saveButton">Save</button>
-    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+        crossorigin="anonymous"></script>
     <script type="module" src="/script.js"></script>
     <script type="module" src="/fileSaver.js"></script>
 </body>
