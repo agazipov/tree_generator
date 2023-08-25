@@ -1,6 +1,7 @@
+// генератор ид (https://www.npmjs.com/package/nanoid)
 let nanoid = (t = 21) => crypto.getRandomValues(new Uint8Array(t)).reduce(((t, e) => t += (e &= 63) < 36 ? e.toString(36) : e < 62 ? (e - 26).toString(36).toUpperCase() : e > 62 ? "-" : "_"), "");
 
-//  структура
+// управление
 const buttonChild = document.getElementById("addChild");
 const buttonSwithParent = document.getElementById("swithParent");
 const buttonDelete = document.getElementById("delContainer");
@@ -35,7 +36,6 @@ class Container {
         this.width = width;
         this.height = height;
         this.area = 500;
-        this.area2 = 500;
         this.x = x;
         this.y = y;
         this.startX = x;
@@ -43,7 +43,6 @@ class Container {
         this.startY2 = y;
         this.id = id;
         this.isBranch = false;
-        this.isDrag = false;
         this.isActiv = isActiv;
         this.isOpen = false;
         this.level = level;
@@ -140,77 +139,28 @@ function changeLevel(parent, child) {
     child.level = parent.level + 1;
 };
 
-
 // сортировка массива
-// переделать циклы на рекурсии, отдельная функция для рекурсии по детям принимает всемя мутацию параметров
-function sortContainers(arr) {
-    // реализация компоновки с распределением от количеста детей
-    // приоритет компонента в зависимости от кол-ва дейтей
-    arr.forEach((container, index, arr) => {
-        container.globalIndex = index; // для удаления элемента
-        container.priority = 1;
-        arr.forEach((container2) => {
-            if (container.parentId === container2.parentId) {
-                if (container.child.length > container2.child.length) {
-                    container.priority += 1;
-                };
-            };
-        });
-    });
-    // сумма приоритетов для конкретного элемента
-    arr.forEach((container) => {
-        let count = 0;
-        if (container.child.length !== 0) {
-            container.child.forEach((child) => {
-                const childContainer = serchParam(child, arr, 'childCreate1');
-                count += childContainer.priority;
-            });
-            container.child.forEach((child) => {
-                const childContainer = serchParam(child, arr, 'childCreate1');
-                childContainer.areaPriority = count;
-            });
-        };
-    });
-    // расчет зоны контейнера в зависимости от его уровня приоритета (за основу берется зона родительского контейнера)
-    arr.forEach((container) => {
-        const parentContainer = serchParam(container.parentId, arr, 'parentCreate');
-        if (container.level !== 1) {
-            container.startX = 75 * parentContainer.level// *изменение х от уровня
-            container.area = parentContainer.area / (container.areaPriority) * container.priority;
-        };
-    });
-    // расчет координаты при разных зонах контейнера
-    arr.forEach((container) => {
-        let count = 0;
-        if (container.child.length !== 0) {
-            container.child.forEach((child) => {
-                const childContainer = serchParam(child, arr, 'childCreate2');
-                count += childContainer.area / 2;
-                childContainer.startY = (container.startY - (container.area / 2)) + count;
-                count += childContainer.area / 2;
-            });
-        };
-    });
-};
 function sortRecursion(container) {
     if (container.child.length === 0) {
         return;
     };
-    const lengthChild = []; // сохраняем количество детей
+    // сохраняем количество детей
+    const lengthChild = []; 
     container.child.forEach((childId) => {
         const foundChild = serchParam(childId, containers, 'childFound');
         lengthChild.push(foundChild.child.length);
     });
     const priorityChild = tranformPriority(lengthChild); // конвертируем количество детей в приоритет
     const areaPriority = priorityChild.reduce((acc, element) => acc + element); // сумма приоритетов
+    // назначение координат
     let count = 0;
     container.child.forEach((childId, index) => {
         const foundChild = serchParam(childId, containers, 'childFound');
-        foundChild.startX = 75 * container.level; // *изменение х от уровня
+        foundChild.startX = 75 * container.level; // изменение х от уровня
         foundChild.area = container.area / areaPriority * priorityChild[index]; // расчет занимаймой контенером зоны
         //  помещаем контенер в середину его зоны (относительно его родителя)
         count += foundChild.area / 2;
-        foundChild.startY = (container.startY - (container.area / 2)) + count;
+        foundChild.startY = (container.startY - (container.area / 2)) + count; // распределяет относительно оцовского контенера
         count += foundChild.area / 2;
         sortRecursion(foundChild);
     });
@@ -235,7 +185,6 @@ buttonChild.addEventListener("click", () => {
     };
     const obj = createNewContainer(activContainer, 'Name');
     containers.push(obj);
-    // sortContainers(containers);
     sortRecursion(root);
     motion();
     infoPanelFilling();
@@ -245,7 +194,7 @@ buttonChild.addEventListener("click", () => {
 // зачистка родительского контейнера от удаленного ребенка (находим глобальный индекс родителя)
 function clearParentContainerForChild() {
     const serchParent = serchParam(activContainer.parentId, containers, 'activDel');
-    containers[serchParent.globalIndex].child = containers[serchParent.globalIndex].child.filter((child) => activContainer.id !== child);
+    serchParent.child = serchParent.child.filter((child) => activContainer.id !== child);
 };
 function delBranch(container) {
     if (container.child.length === 0) {
@@ -254,8 +203,8 @@ function delBranch(container) {
         return;
     };
     container.child.forEach((childId) => {
-        let serchChild = serchParam(childId, containers, 'childDel');
-        delBranch(serchChild);
+        const foundChild = serchParam(childId, containers, 'childDel');
+        delBranch(foundChild);
     });
     containers.splice(container.globalIndex, 1);
     containers.forEach((container, index) => container.globalIndex = index);
@@ -336,14 +285,8 @@ function switchParent(object) {
     object.child.push(activContainer.id); // добавляем контейнеру в дети активный контенер
     isSwitch = !isSwitch;   // дизейбл функции кнопки для клика
     serchChilds(object, changeLevel); // меняем уровень у контенера и детей
-    // сортировка массива при перемещении компонентов
-    if (object.globalIndex > activContainer.globalIndex) {
-        console.log(`splice`);
-        containers.splice(object.globalIndex, 1);
-        containers.splice(activContainer.globalIndex, 0, object);
-    };
     serchParent(null); // обнуляем путь у массива
-    sortContainers(containers); // сортировка
+    sortRecursion(root);  // сортировка
     motion(); // отрисовка
     infoPanelFilling(); // ** изменение инфо панели
 };
@@ -371,7 +314,7 @@ function serchParent(container) {
 };
 // назначение активного контейнера
 function handleActivContainer(object) {
-    if (object?.globalIndex === 0) {
+    if (object?.id === containers[0].id) {
         buttonSwithParent.disabled = true;
     } else {
         buttonSwithParent.disabled = false;
