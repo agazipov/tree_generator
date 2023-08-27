@@ -13,10 +13,6 @@ const changeButton = document.getElementById("changeButton");
 const increaseScale = document.getElementById("increaseScale");
 const decreaseScale = document.getElementById("decreaseScale");
 const spanScale = document.getElementById("spanScale");
-// ширина
-const increaseWidth = document.getElementById("increaseWidth");
-const decreaseWidth = document.getElementById("decreaseWidth");
-const spanWidth = document.getElementById("spanWidth");
 // файлы
 const saveButton = document.getElementById("saveButton");
 const file = document.getElementById("file");
@@ -30,6 +26,7 @@ const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 const elementInfo = document.getElementsByClassName("elementInfo_text");
+const center = document.getElementsByClassName("centralization");
 
 class Container {
     constructor(width, height, y, x, level, id, isActiv, parentId, title) {
@@ -40,11 +37,11 @@ class Container {
         this.y = y;
         this.startX = x;
         this.startY = y;
-        this.startY2 = y;
         this.id = id;
         this.isBranch = false;
         this.isActiv = isActiv;
         this.isOpen = false;
+        this.isDisable = false;
         this.level = level;
         this.child = [];
         this.parentId = parentId;
@@ -60,7 +57,6 @@ changeInput.value = containers[0].title;
 let activContainer = root; // ссылка на активный элемент в массиве
 let gitBlob = [];
 let gitTree = [];
-let factorWidth = 1;
 
 // переменные масштабирования
 let scale = 1;
@@ -133,11 +129,15 @@ function serchChilds(container, func) {
         serchChilds(foundChild, func);
     });
 };
-
-// изменение уровня
+// изменение уровня и сброс  прозрачности
 function changeLevel(parent, child) {
     child.level = parent.level + 1;
+    child.isDisable = false;
 };
+// дизайбл контенера
+function disableContainer(parent, child) {
+    child.isDisable = true;
+}
 
 // сортировка массива
 function sortRecursion(container) {
@@ -145,7 +145,7 @@ function sortRecursion(container) {
         return;
     };
     // сохраняем количество детей
-    const lengthChild = []; 
+    const lengthChild = [];
     container.child.forEach((childId) => {
         const foundChild = serchParam(childId, containers, 'childFound');
         lengthChild.push(foundChild.child.length);
@@ -196,7 +196,7 @@ function clearParentContainerForChild() {
     const serchParent = serchParam(activContainer.parentId, containers, 'activDel');
     serchParent.child = serchParent.child.filter((child) => activContainer.id !== child);
 };
-function delBranch(container) {
+function delBranch(container) { //** засунуть в рукурсию поиска детей
     if (container.child.length === 0) {
         containers.splice(container.globalIndex, 1);
         containers.forEach((container, index) => container.globalIndex = index);
@@ -247,8 +247,7 @@ changeInput.addEventListener("change", (event) => {
     inputValue = event.target.value;
 });
 changeButton.addEventListener("click", () => {
-    // let activContainer = serchParam(true, containers, 'isActiv');
-    containers[activContainer.globalIndex].title = inputValue;
+    activContainer.title = inputValue;
     motion();
 });
 
@@ -264,41 +263,39 @@ decreaseScale.addEventListener("click", () => {
     spanScale.innerText = scale;
     motion();
 });
-// изменение ширины
-increaseWidth.addEventListener("click", () => {
-    factorWidth += 1;
-    spanWidth.innerText = factorWidth;
-    sortContainers(containers);
-    motion();
-});
-decreaseWidth.addEventListener("click", () => {
-    factorWidth -= 1;
-    spanWidth.innerText = factorWidth;
-    sortContainers(containers);
-    motion();
-});
 
 // смена родителя (принимает компонент на который перенесли)
+// свич
+let isSwitch = false;
+buttonSwithParent.addEventListener("click", () => {
+    isSwitch = !isSwitch;
+    if (isSwitch) {
+        buttonSwithParent.textContent = 'Select Parent';
+        serchChilds(activContainer, disableContainer);
+    } else {
+        buttonSwithParent.textContent = 'Switch Parent';
+        containers.forEach((container) => {
+            container.isDisable = false;
+        });
+    };
+    motion();
+});
 function switchParent(object) {
     clearParentContainerForChild(); // удаляем инфу о ребенке в родительском контейнере
     activContainer.parentId = object.id; // назначаем выделенному контенеру контенер-родитель
     object.child.push(activContainer.id); // добавляем контейнеру в дети активный контенер
+    buttonSwithParent.textContent = 'Switch Parent';
     isSwitch = !isSwitch;   // дизейбл функции кнопки для клика
-    serchChilds(object, changeLevel); // меняем уровень у контенера и детей
-    serchParent(null); // обнуляем путь у массива
+    serchChilds(object, changeLevel); // меняем уровень у контенера и детей ** засунуть в сортировку
     sortRecursion(root);  // сортировка
+    serchParentIsBranch(activContainer); // обнуляем путь у массива
+    // handleActivContainer(null);
     motion(); // отрисовка
-    infoPanelFilling(); // ** изменение инфо панели
 };
-// тогл для кнопки смены родителя
-let isSwitch = false;
-buttonSwithParent.addEventListener("click", () => {
-    isSwitch = !isSwitch;
-});
 
 // активная кнопка
 // поиск родителя (окраска пути до компонента)
-function serchParent(container) {
+function serchParentIsBranch(container) {
     if (!container) {
         // клик не в контейнер сбрасывает отображене ветки
         containers.forEach((container) => container.isBranch = false);
@@ -309,25 +306,26 @@ function serchParent(container) {
             return;
         };
         parentContainer.isBranch = true;
-        serchParent(parentContainer);
+        serchParentIsBranch(parentContainer);
     };
 };
 // назначение активного контейнера
 function handleActivContainer(object) {
-    if (object?.id === containers[0].id) {
+    if (object?.id === containers[0].id || object === null) {
         buttonSwithParent.disabled = true;
     } else {
         buttonSwithParent.disabled = false;
     };
-    if (object === null) {
-        activContainer = object;
+    activContainer = object;
+    infoPanelFilling((object === null));
+};
+handleActivContainer(root);
+// вывод инфы об активном контенере 
+function infoPanelFilling(clear = false) {
+    if (clear) {
+        elementInfo[0].innerHTML = '';
         return;
     };
-    activContainer = object;
-    infoPanelFilling();
-};
-// вывод инфы об активном контенере 
-function infoPanelFilling() {
     elementInfo[0].innerHTML = '';
     const nameArray = ['title', 'id', 'globalIndex', 'child', 'branch'] // ** фиксировать изменения из change
     for (let index = 0; index < nameArray.length; index++) {
@@ -339,7 +337,7 @@ function infoPanelFilling() {
                 elementInfo[0].insertAdjacentElement('beforeend', listParents);
                 break;
             case 'child':
-                const branchName = containers[activContainer.globalIndex].child.join(', \n');
+                const branchName = activContainer.child.join(', \n');
                 const lisstChilds = document.createElement('li');
                 lisstChilds.textContent = `Childs: \n ${branchName}`;
                 elementInfo[0].insertAdjacentElement('beforeend', lisstChilds);
@@ -352,54 +350,49 @@ function infoPanelFilling() {
         };
     };
 };
-handleActivContainer(root);
 canvas.addEventListener("click", (event) => {
     const clickX = event.clientX - rect.left - offsetX;
     const clickY = event.clientY - rect.top - offsetY;
 
     // Проверяем объекты на пересечение с кликом
-    !isSwitch && handleActivContainer(null);
-    serchParent(null); // ** не выполнять при повторных кликах
-    containers.forEach((object) => {
-        // Обработка клика на объекте
-        if (
-            clickX >= object.x &&
-            clickX <= object.x + object.width &&
-            clickY >= object.y &&
-            clickY <= object.y + object.height
-        ) {
-            if (isSwitch) {
-                switchParent(object);
-                return;
-            } else {
+    !isSwitch && (handleActivContainer(null), serchParentIsBranch(null)); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
+    if (!isSwitch) {
+        containers.forEach((object) => {
+            // Обработка клика на объекте
+            if (
+                clickX >= object.x &&
+                clickX <= object.x + object.width &&
+                clickY >= object.y &&
+                clickY <= object.y + object.height
+            ) {
                 object.isActiv ? // при повторном клике
                     (object.isActiv = false, changeInput.value = "")
                     :
-                    (object.isActiv = true, changeInput.value = object.title, serchParent(object), handleActivContainer(object));
+                    (object.isActiv = true, changeInput.value = object.title, serchParentIsBranch(object), handleActivContainer(object));
                 console.log(`activContainer`, object);
-            }
-        } else {
-            // ткнул ммимо контейнера
-            object.isActiv = false;
-        };
-        // кlик по плашке инфо
-        // if (
-        //     clickX >= object.x + 44 &&
-        //     clickX <= object.x + 56 &&
-        //     clickY >= object.y - 3 &&
-        //     clickY <= object.y + 9
-        // ) {
-        //     object.isOpen = true;
-        // };
-        // if (
-        //     clickX >= object.x + 74 &&
-        //     clickX <= object.x + 86 &&
-        //     clickY >= object.y - 3 &&
-        //     clickY <= object.y + 9
-        // ) {
-        //     object.isOpen = false;
-        // };
-    });
+            } else {
+                object.isActiv = false;
+            };
+        });
+    } else {
+        containers.forEach((object) => {
+            if (
+                clickX >= object.x &&
+                clickX <= object.x + object.width &&
+                clickY >= object.y &&
+                clickY <= object.y + object.height
+            ) {
+                if (object.isDisable) {
+                    console.log(`dont pick child`);
+                } else {
+                    switchParent(object);
+                    serchParentIsBranch(object);
+                }
+            } else {
+                return;
+            };
+        });
+    }
     draw();
 });
 
@@ -472,6 +465,13 @@ canvas.addEventListener('mouseup', (event) => {
         gitBlob[dragIndex].y = savePositionY
         dragIndex = null;
     };
+});
+//централизация
+center[0].addEventListener('click', () => {
+    const valueX = -offsetX, valueY = -offsetY;
+    offsetX = 0;
+    offsetY = 0;
+    draw(valueX, valueY);
 });
 
 // открываем/скрываем панель элементов гита
@@ -548,16 +548,18 @@ urlSelector.addEventListener('change', (event) => {
 function draw(x, y) {
     ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width, canvas.height); // Очищаем холст
     (x || y) && ctx.translate(x, y);
+    drawGrid(); // сетка
 
-    drawGrid();
-
-    containers.forEach(container => {
+    containers.forEach(container => { // ** багуля с отрисовкой при смене родителя
         // отрисовываем линии
         container.child.forEach((childId) => {
             // поиск дочерних у родителя на нижнем уровне
             const findContainer = containers.find((container) => container.id === childId);
             if (findContainer) {
+                ctx.globalAlpha = 1;
                 ctx.beginPath();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+                ctx.shadowBlur = 0;
                 ctx.moveTo(container.x + 23, container.y + 9);
                 ctx.lineTo(findContainer.x + 23, findContainer.y + 9);
                 (findContainer.isBranch || findContainer.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
@@ -579,6 +581,8 @@ function draw(x, y) {
 
     openGitPanel && gitBlob.forEach(({ name, x, y }) => {
         ctx.beginPath();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
         ctx.fillStyle = "black";
         ctx.fillRect(x - 2, y + 2, 104, 16);
         ctx.clearRect(x, y + 4, 100, 14);
@@ -590,14 +594,23 @@ function draw(x, y) {
         ctx.textAlign = "start";
         ctx.fillText(name, x + 10, y + 15);
         ctx.closePath();
-
     });
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, isBranch, isOpen, child, globalIndex }, width, height) {
+function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
+    // тени исчезают в полдень
+    if (isSwitch && !isDisable) {
+        ctx.shadowColor = '#0a58ca';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    } else {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+    };
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
     ctx.lineJoin = "round";
@@ -607,8 +620,14 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, globalIndex }, wi
     ctx.lineTo(x, y + height); // Рисуем линию в нижний левый угол
     ctx.lineTo(x, y); // Рисуем линию в левый верхний угол
     ctx.stroke(); // Закончите путь
-
     // ctx.fillRect(x, y, width, height);
+
+    // прозрачность при дизейдле
+    if (isDisable) {
+        ctx.globalAlpha = 0.3;
+    } else {
+        ctx.globalAlpha = 1;
+    };
 
     // Заполните прямоугольник с заданным цветом
     if (isActiv) {
@@ -624,7 +643,7 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, globalIndex }, wi
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
     // ctx.fillText(title, x + 6, y + 12);
-    ctx.fillText(globalIndex, x + 6, y + 12);
+    ctx.fillText(id, x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
@@ -647,6 +666,9 @@ function infoRect(x, y, radius, open = false) {
 // сеточка
 const gridSize = 100; // размер ячейки сетки
 function drawGrid() {
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.strokeStyle = '#ccc';
 

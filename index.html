@@ -25,11 +25,6 @@
                     <button id="delContainer" type="button" class="btn btn-primary btn-sm">Delete Container</button>
                     <button id="clear" type="button" class="btn btn-primary btn-sm">Clear</button>
                 </div>
-                <div class="widthContainer mb-3">
-                    <span>Factor Width: <span id="spanWidth">1</span></span>
-                    <button id="increaseWidth" class="btn btn-primary btn-sm">+</button>
-                    <button id="decreaseWidth" class="btn btn-primary btn-sm">-</button>
-                </div>
                 <div class="gitContainer mb-3">
                     <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
                     <input type="text" id="urlImput" autocomplete="off">
@@ -53,7 +48,10 @@
                 </div>
             </div>
 
-            <canvas id="myCanvas" width="500" height="500" style="background-color: grey;" ></canvas>
+            <div class="position-relative">
+                <canvas id="myCanvas" width="500" height="500" style="background-color: grey;" ></canvas>
+                <button class="centralization"></button>
+            </div>
 
             <div class="infoPanel">
                 <h3>Element Info</h3>
