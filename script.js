@@ -35,8 +35,6 @@ class Container {
         this.area = 500;
         this.x = x;
         this.y = y;
-        this.startX = x;
-        this.startY = y;
         this.id = id;
         this.isBranch = false;
         this.isActiv = isActiv;
@@ -45,7 +43,6 @@ class Container {
         this.level = level;
         this.child = [];
         this.parentId = parentId;
-        this.globalIndex = 0;
         this.title = title;
     }
 };
@@ -53,7 +50,7 @@ class Container {
 const root = new Container(46, 18, rect.height / 2 - 23, 20, 1, nanoid(), true, 'parentID', 'root');
 
 const containers = [root];
-changeInput.value = containers[0].title;
+changeInput.value = root;
 let activContainer = root; // ссылка на активный элемент в массиве
 let gitBlob = [];
 let gitTree = [];
@@ -70,20 +67,6 @@ let offsetX = 0;
 let offsetY = 0;
 
 let dragIndex = null;
-
-// генерация на отрисовку ** это походу не нужно
-function motion() {
-    containers.forEach((container) => {
-        container.x = container.startX * scale;
-        container.y = container.startY * scale;
-        // версия для старого смещения
-        //     container.x = (container.startX + offsetX) * scale;
-        //     container.y = (container.startY + offsetY) * scale;
-        container.width *= scale;
-        container.height *= scale;
-    });
-    draw();
-};
 
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewContainer(parent, title) {
@@ -135,7 +118,7 @@ function changeLevel(parent, child) {
     child.isDisable = false;
 };
 // дизайбл контенера
-function disableContainer(parent, child) {
+function disableContainer(_parent, child) {
     child.isDisable = true;
 }
 
@@ -156,11 +139,11 @@ function sortRecursion(container) {
     let count = 0;
     container.child.forEach((childId, index) => {
         const foundChild = serchParam(childId, containers, 'childFound');
-        foundChild.startX = 75 * container.level; // изменение х от уровня
+        foundChild.x = 75 * container.level; // изменение х от уровня
         foundChild.area = container.area / areaPriority * priorityChild[index]; // расчет занимаймой контенером зоны
         //  помещаем контенер в середину его зоны (относительно его родителя)
         count += foundChild.area / 2;
-        foundChild.startY = (container.startY - (container.area / 2)) + count; // распределяет относительно оцовского контенера
+        foundChild.y = (container.y - (container.area / 2)) + count; // распределяет относительно оцовского контенера
         count += foundChild.area / 2;
         sortRecursion(foundChild);
     });
@@ -186,7 +169,7 @@ buttonChild.addEventListener("click", () => {
     const obj = createNewContainer(activContainer, 'Name');
     containers.push(obj);
     sortRecursion(root);
-    motion();
+    draw();
     infoPanelFilling();
 });
 
@@ -196,18 +179,18 @@ function clearParentContainerForChild() {
     const serchParent = serchParam(activContainer.parentId, containers, 'activDel');
     serchParent.child = serchParent.child.filter((child) => activContainer.id !== child);
 };
-function delBranch(container) { //** засунуть в рукурсию поиска детей
+function delBranch(container) { 
     if (container.child.length === 0) {
-        containers.splice(container.globalIndex, 1);
-        containers.forEach((container, index) => container.globalIndex = index);
+        const containerIndex = containers.indexOf(container);
+        containers.splice(containerIndex, 1);
         return;
     };
     container.child.forEach((childId) => {
         const foundChild = serchParam(childId, containers, 'childDel');
         delBranch(foundChild);
     });
-    containers.splice(container.globalIndex, 1);
-    containers.forEach((container, index) => container.globalIndex = index);
+    const containerIndex = containers.indexOf(container);
+    containers.splice(containerIndex, 1);
 };
 buttonDelete.addEventListener("click", () => {
     if (!activContainer) {
@@ -218,27 +201,26 @@ buttonDelete.addEventListener("click", () => {
         console.log(`Нельзя удалить рут`);
         return;
     };
-
     delBranch(activContainer);
     clearParentContainerForChild();
     handleActivContainer(null);
-    serchParent(null);
-    sortContainers(containers);
-    motion();
+    serchParentIsBranch(null);
+    sortRecursion(root);
+    draw();
 });
 
 // очистка
 buttonClear.addEventListener("click", () => {
     containers.length = 1;
     containers[0].child.length = 0;
-    containers[0].isActiv = true;
-    changeInput.value = containers[0].title;
-    activContainer = containers[0];
+    handleActivContainer(root);
+    changeInput.value = root;
     scale = 1;
     spanScale.innerText = scale;
+    const valueX = -offsetX, valueY = -offsetY;
     offsetX = 0;
     offsetY = 0;
-    motion();
+    draw(valueX, valueY);
 });
 
 // редактирование
@@ -248,7 +230,7 @@ changeInput.addEventListener("change", (event) => {
 });
 changeButton.addEventListener("click", () => {
     activContainer.title = inputValue;
-    motion();
+    draw();
 });
 
 // масштабирование
@@ -256,12 +238,12 @@ changeButton.addEventListener("click", () => {
 increaseScale.addEventListener("click", () => {
     scale += 0.25;
     spanScale.innerText = scale;
-    motion();
+    draw();
 });
 decreaseScale.addEventListener("click", () => {
     scale -= 0.25;
     spanScale.innerText = scale;
-    motion();
+    draw();
 });
 
 // смена родителя (принимает компонент на который перенесли)
@@ -278,7 +260,7 @@ buttonSwithParent.addEventListener("click", () => {
             container.isDisable = false;
         });
     };
-    motion();
+    draw();
 });
 function switchParent(object) {
     clearParentContainerForChild(); // удаляем инфу о ребенке в родительском контейнере
@@ -289,15 +271,14 @@ function switchParent(object) {
     serchChilds(object, changeLevel); // меняем уровень у контенера и детей ** засунуть в сортировку
     sortRecursion(root);  // сортировка
     serchParentIsBranch(activContainer); // обнуляем путь у массива
-    // handleActivContainer(null);
-    motion(); // отрисовка
+    infoPanelFilling();
 };
 
 // активная кнопка
 // поиск родителя (окраска пути до компонента)
 function serchParentIsBranch(container) {
     if (!container) {
-        // клик не в контейнер сбрасывает отображене ветки
+        // клик не в контейнер сбрасывает отображение ветки
         containers.forEach((container) => container.isBranch = false);
         return;
     } else {
@@ -317,6 +298,9 @@ function handleActivContainer(object) {
         buttonSwithParent.disabled = false;
     };
     activContainer = object;
+    if (activContainer) {
+        activContainer.isActiv = true;
+    };
     infoPanelFilling((object === null));
 };
 handleActivContainer(root);
@@ -327,7 +311,7 @@ function infoPanelFilling(clear = false) {
         return;
     };
     elementInfo[0].innerHTML = '';
-    const nameArray = ['title', 'id', 'globalIndex', 'child', 'branch'] // ** фиксировать изменения из change
+    const nameArray = ['id', 'child', 'branch'] // ** фиксировать изменения из change
     for (let index = 0; index < nameArray.length; index++) {
         switch (nameArray[index]) {
             case 'branch':
@@ -355,8 +339,9 @@ canvas.addEventListener("click", (event) => {
     const clickY = event.clientY - rect.top - offsetY;
 
     // Проверяем объекты на пересечение с кликом
-    !isSwitch && (handleActivContainer(null), serchParentIsBranch(null)); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
+    !isSwitch && handleActivContainer(null); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
     if (!isSwitch) {
+        serchParentIsBranch(null); 
         containers.forEach((object) => {
             // Обработка клика на объекте
             if (
@@ -368,10 +353,11 @@ canvas.addEventListener("click", (event) => {
                 object.isActiv ? // при повторном клике
                     (object.isActiv = false, changeInput.value = "")
                     :
-                    (object.isActiv = true, changeInput.value = object.title, serchParentIsBranch(object), handleActivContainer(object));
+                    (changeInput.value = object.title, serchParentIsBranch(object), handleActivContainer(object));
                 console.log(`activContainer`, object);
             } else {
                 object.isActiv = false;
+                changeInput.value = "";
             };
         });
     } else {
@@ -382,14 +368,13 @@ canvas.addEventListener("click", (event) => {
                 clickY >= object.y &&
                 clickY <= object.y + object.height
             ) {
-                if (object.isDisable) {
-                    console.log(`dont pick child`);
+                if (object.isDisable || object.id === activContainer.id) {
+                    console.log(`dont pick`);
+                    return;
                 } else {
+                    serchParentIsBranch(null); // ** дублирование
                     switchParent(object);
-                    serchParentIsBranch(object);
-                }
-            } else {
-                return;
+                };
             };
         });
     }
@@ -458,7 +443,7 @@ canvas.addEventListener('mouseup', (event) => {
                 containers.push(obj);
                 sortContainers(containers);
 
-                motion();
+                draw();
             };
         });
         gitBlob[dragIndex].x = savePositionX;
@@ -478,7 +463,7 @@ center[0].addEventListener('click', () => {
 let openGitPanel = false;
 gitPanel.addEventListener('click', () => {
     openGitPanel = !openGitPanel;
-    motion();
+    draw();
 });
 
 // ссылка на репу
@@ -504,7 +489,7 @@ file.addEventListener('change', (event) => {
         const parsedData = JSON.parse(contents);
 
         containers.push(...parsedData);
-        motion()
+        draw()
     };
 
     reader.readAsText(file);
@@ -540,7 +525,7 @@ urlSelector.addEventListener('change', (event) => {
                 // return path.includes('/') ? path.substr(path.lastIndexOf('/') + 1) : path;
             });
             console.log(gitBlob);
-            motion();
+            draw();
         })
 });
 
