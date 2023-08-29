@@ -7,8 +7,11 @@ const buttonSwithParent = document.getElementById("swithParent");
 const buttonDelete = document.getElementById("delContainer");
 const buttonClear = document.getElementById("clear");
 // редактирование заголовка
-const changeInput = document.getElementById("changeInput");
-const changeButton = document.getElementById("changeButton");
+const titleInput = document.getElementById("titleInput");
+const titleButton = document.getElementById("titleButton");
+// редактирование описания
+const accordionTextArea = document.getElementById("accordionTextArea");
+// const descriptionButton = document.getElementById("titleButton");
 // масштаб
 const increaseScale = document.getElementById("increaseScale");
 const decreaseScale = document.getElementById("decreaseScale");
@@ -19,6 +22,7 @@ const file = document.getElementById("file");
 // гит
 const gitReq = document.getElementById("gitReq");
 const urlImput = document.getElementById("urlImput");
+urlImput.value = 'agazipov/react-2023-05-25'; // **
 const urlSelector = document.getElementById("urlSelector");
 const gitPanel = document.getElementById("gitPanel");
 // канвас
@@ -44,19 +48,22 @@ class Container {
         this.child = [];
         this.parentId = parentId;
         this.title = title;
+        this.description = 'description';
     }
 };
 
-const root = new Container(46, 18, rect.height / 2 - 23, 20, 1, nanoid(), true, 'parentID', 'root');
+const root = new Container(46, 18, rect.height / 2 - 9, 20, 1, nanoid(), true, 'parentID', 'root');
 
 const containers = [root];
-changeInput.value = root;
+titleInput.value = root.title;
+accordionTextArea.value = root.description;
 let activContainer = root; // ссылка на активный элемент в массиве
 let gitBlob = [];
 let gitTree = [];
 
 // переменные масштабирования
 let scale = 1;
+let scaleModify = 1;
 spanScale.innerText = scale;
 
 // переменные перемещения
@@ -67,6 +74,7 @@ let offsetX = 0;
 let offsetY = 0;
 
 let dragIndex = null;
+let openGitPanel = false;
 
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewContainer(parent, title) {
@@ -179,7 +187,7 @@ function clearParentContainerForChild() {
     const serchParent = serchParam(activContainer.parentId, containers, 'activDel');
     serchParent.child = serchParent.child.filter((child) => activContainer.id !== child);
 };
-function delBranch(container) { 
+function delBranch(container) {
     if (container.child.length === 0) {
         const containerIndex = containers.indexOf(container);
         containers.splice(containerIndex, 1);
@@ -214,7 +222,7 @@ buttonClear.addEventListener("click", () => {
     containers.length = 1;
     containers[0].child.length = 0;
     handleActivContainer(root);
-    changeInput.value = root;
+    titleInput.value = root;
     scale = 1;
     spanScale.innerText = scale;
     const valueX = -offsetX, valueY = -offsetY;
@@ -224,25 +232,39 @@ buttonClear.addEventListener("click", () => {
 });
 
 // редактирование
-let inputValue;
-changeInput.addEventListener("change", (event) => {
-    inputValue = event.target.value;
-});
-changeButton.addEventListener("click", () => {
-    activContainer.title = inputValue;
+titleButton.addEventListener("click", () => {
+    activContainer.title = titleInput.value;
     draw();
+});
+accordionTextArea.addEventListener("change", (event) => {
+    activContainer.description = event.target.value;
 });
 
 // масштабирование
-// * не меняются координаты при масштабировании
 increaseScale.addEventListener("click", () => {
-    scale += 0.25;
-    spanScale.innerText = scale;
+    // scale = 1.333;
+    scale = 2;
+    scaleModify = 1;
+    spanScale.innerText = scaleModify;
+    increaseScale.disabled = true;
+    decreaseScale.disabled = false
+    root.area = 500;
+    root.y = rect.height / 2 - 9;
+    ctx.scale(scale, scale);
+    sortRecursion(root);
     draw();
 });
 decreaseScale.addEventListener("click", () => {
-    scale -= 0.25;
+    // scale = 0.75;
+    scale = 0.5;
+    scaleModify = 2;
     spanScale.innerText = scale;
+    increaseScale.disabled = false;
+    decreaseScale.disabled = true;
+    root.area = 1000;
+    root.y = rect.height - 9;
+    ctx.scale(scale, scale);
+    sortRecursion(root);
     draw();
 });
 
@@ -307,6 +329,7 @@ handleActivContainer(root);
 // вывод инфы об активном контенере 
 function infoPanelFilling(clear = false) {
     if (clear) {
+        titleInput.value = '';
         elementInfo[0].innerHTML = '';
         return;
     };
@@ -335,13 +358,18 @@ function infoPanelFilling(clear = false) {
     };
 };
 canvas.addEventListener("click", (event) => {
-    const clickX = event.clientX - rect.left - offsetX;
-    const clickY = event.clientY - rect.top - offsetY;
+    // выход из собыытия клика при перемещении гитовых элементов (не меняет активный контейнер)
+    if (dragIndex !== null) {
+        dragIndex = null;
+        return;
+    };
+    const clickX = (event.clientX - rect.left) * scaleModify - offsetX;
+    const clickY = (event.clientY - rect.top) * scaleModify - offsetY;
 
     // Проверяем объекты на пересечение с кликом
     !isSwitch && handleActivContainer(null); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
     if (!isSwitch) {
-        serchParentIsBranch(null); 
+        serchParentIsBranch(null);
         containers.forEach((object) => {
             // Обработка клика на объекте
             if (
@@ -351,13 +379,12 @@ canvas.addEventListener("click", (event) => {
                 clickY <= object.y + object.height
             ) {
                 object.isActiv ? // при повторном клике
-                    (object.isActiv = false, changeInput.value = "")
+                    (object.isActiv = false, titleInput.value = '', accordionTextArea.value = '')
                     :
-                    (changeInput.value = object.title, serchParentIsBranch(object), handleActivContainer(object));
-                console.log(`activContainer`, object);
+                    (titleInput.value = object.title, accordionTextArea.value = object.description, serchParentIsBranch(object), handleActivContainer(object));
+                console.log(`activContainer`, activContainer);
             } else {
                 object.isActiv = false;
-                changeInput.value = "";
             };
         });
     } else {
@@ -368,7 +395,7 @@ canvas.addEventListener("click", (event) => {
                 clickY >= object.y &&
                 clickY <= object.y + object.height
             ) {
-                if (object.isDisable || object.id === activContainer.id) {
+                if (object.isDisable || object.id === activContainer.id || object.id === activContainer.parentId) {
                     console.log(`dont pick`);
                     return;
                 } else {
@@ -386,7 +413,7 @@ let savePositionX, savePositionY;
 canvas.addEventListener('mousedown', (event) => {
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
-    if (event.button === 0) { // Проверяем нажатие правой кнопки мыши
+    if (event.button === 3) { // Проверяем нажатие правой кнопки мыши
         isDragging = true;
         startDragX = event.clientX;
         startDragY = event.clientY;
@@ -401,7 +428,6 @@ canvas.addEventListener('mousedown', (event) => {
             clickY <= element.y + 16
         ) {
             dragIndex = index;
-            console.log(dragIndex);
             savePositionX = element.x;
             savePositionY = element.y;
         };
@@ -420,35 +446,31 @@ canvas.addEventListener('mousemove', (event) => {
 
     if (dragIndex !== null) {
         gitBlob[dragIndex].x = event.clientX - rect.left - 50;
-        gitBlob[dragIndex].y = event.clientY - rect.top - 8;
+        gitBlob[dragIndex].y = event.clientY - rect.top - 9;
         draw();
     };
 });
 canvas.addEventListener('mouseup', (event) => {
-    if (event.button === 0) { // Проверяем отпускание правой кнопки мыши
+    if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
     };
 
     if (dragIndex !== null) {
-        containers.forEach((element) => {
+        containers.forEach((container) => {
             if (
-                gitBlob[dragIndex].x + 50 >= element.x &&
-                gitBlob[dragIndex].x + 50 <= element.x + 100 &&
-                gitBlob[dragIndex].y + 8 >= element.y &&
-                gitBlob[dragIndex].y + 8 <= element.y + 16
+                gitBlob[dragIndex].x + 50 >= container.x &&
+                gitBlob[dragIndex].x + 50 <= container.x + 50 &&
+                gitBlob[dragIndex].y + 9 >= container.y &&
+                gitBlob[dragIndex].y + 9 <= container.y + 18
             ) {
-                activContainer = element;
-                let obj = createNewContainer(activContainer, gitBlob[dragIndex].name);
-
+                const obj = createNewContainer(container, gitBlob[dragIndex].name);
                 containers.push(obj);
-                sortContainers(containers);
-
-                draw();
             };
         });
         gitBlob[dragIndex].x = savePositionX;
         gitBlob[dragIndex].y = savePositionY
-        dragIndex = null;
+        sortRecursion(root);
+        draw();
     };
 });
 //централизация
@@ -460,17 +482,10 @@ center[0].addEventListener('click', () => {
 });
 
 // открываем/скрываем панель элементов гита
-let openGitPanel = false;
 gitPanel.addEventListener('click', () => {
     openGitPanel = !openGitPanel;
     draw();
 });
-
-// ссылка на репу
-let urlImputValue;
-urlImput.addEventListener('change', (event) => {
-    urlImputValue = event.target.value;
-})
 
 // сейвинг загрузинг
 saveButton.addEventListener('click', function () {
@@ -497,7 +512,7 @@ file.addEventListener('change', (event) => {
 
 // запросинг
 gitReq.addEventListener('click', () => {
-    fetch(`https://api.github.com/repos/${urlImputValue}/git/trees/main?recursive=1`)
+    fetch(`https://api.github.com/repos/${urlImput.value}/git/trees/main?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
             gitTree = data.tree.filter(({ path, type }) => type === 'tree' && !path.includes('/'))
@@ -517,7 +532,7 @@ urlSelector.addEventListener('change', (event) => {
             shaTree = sha;
         }
     });
-    fetch(`https://api.github.com/repos/${urlImputValue}/git/trees/${shaTree}?recursive=1`)
+    fetch(`https://api.github.com/repos/${urlImput.value}/git/trees/${shaTree}?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
             gitBlob = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
@@ -531,7 +546,7 @@ urlSelector.addEventListener('change', (event) => {
 
 // функция рисования
 function draw(x, y) {
-    ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width, canvas.height); // Очищаем холст
+    ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width * scaleModify, canvas.height * scaleModify); // Очищаем холст
     (x || y) && ctx.translate(x, y);
     drawGrid(); // сетка
 
@@ -586,8 +601,12 @@ function draw(x, y) {
 function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
-    // тени исчезают в полдень
-    if (isSwitch && !isDisable) {
+    // отображение теней при свиче (*лаконичней)
+    if (
+        (isSwitch && !isDisable) &&
+        (isSwitch && id !== activContainer.id) &&
+        (isSwitch && id !== activContainer.parentId)
+    ) {
         ctx.shadowColor = '#0a58ca';
         ctx.shadowBlur = 12;
         ctx.shadowOffsetX = 0;
@@ -628,7 +647,7 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable }, 
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
     // ctx.fillText(title, x + 6, y + 12);
-    ctx.fillText(id, x + 6, y + 12);
+    ctx.fillText(id.substr(0, 6), x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
@@ -658,16 +677,16 @@ function drawGrid() {
     ctx.strokeStyle = '#ccc';
 
     // рисуем вертикальные линии
-    for (let x = 0 - offsetX; x <= canvas.width - offsetX; x += gridSize) {
+    for (let x = 0 - offsetX; x <= (canvas.width * scaleModify) - offsetX; x += gridSize) {
         ctx.moveTo(x, 0 - offsetY);
-        ctx.lineTo(x, canvas.height - offsetY);
+        ctx.lineTo(x, (canvas.height * scaleModify) - offsetY);
         ctx.stroke();
     };
 
     // рисуем горизонтальные линии
-    for (let y = 0 - offsetY; y <= canvas.height - offsetY; y += gridSize) {
+    for (let y = 0 - offsetY; y <= (canvas.height * scaleModify) - offsetY; y += gridSize) {
         ctx.moveTo(0 - offsetX, y);
-        ctx.lineTo(canvas.width - offsetX, y);
+        ctx.lineTo((canvas.width * scaleModify) - offsetX, y);
         ctx.stroke();
     };
 };

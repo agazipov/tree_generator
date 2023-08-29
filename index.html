@@ -26,15 +26,16 @@
                     <button id="clear" type="button" class="btn btn-primary btn-sm">Clear</button>
                 </div>
                 <div class="gitContainer mb-3">
-                    <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
                     <input type="text" id="urlImput" autocomplete="off">
-                    <select name="urlSelector" id="urlSelector" class="form-select form-select-sm" aria-label="Small select example">
+                    <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
+                    <select name="urlSelector" id="urlSelector" class="form-select form-select-sm"
+                        aria-label="Small select example">
                     </select>
                     <button id="gitPanel" class="btn btn-primary btn-sm">GitPanel</button>
                 </div>
                 <div class="scaleCpntainer  mb-3">
                     <span>Scale: <span id="spanScale">1</span></span>
-                    <button id="increaseScale" class="btn btn-primary btn-sm">+</button>
+                    <button id="increaseScale" class="btn btn-primary btn-sm" disabled>+</button>
                     <button id="decreaseScale" class="btn btn-primary btn-sm">-</button>
                 </div>
                 <div class="saveFileContainer">
@@ -45,16 +46,32 @@
             </div>
 
             <div class="position-relative">
-                <canvas id="myCanvas" width="500" height="500" style="background-color: grey;" ></canvas>
+                <canvas id="myCanvas" width="500" height="500" style="background-color: grey;"></canvas>
                 <button class="centralization"></button>
             </div>
 
             <div class="infoPanel">
                 <h3>Element Info</h3>
-                <div class="changeContainer mb-3">
+                <div class="titleContainer mb-3">
                     <span>Title: </span>
-                    <input type="text" id="changeInput" autocomplete="off">
-                    <button id="changeButton" class="btn btn-primary btn-sm">Change</button>
+                    <input type="text" id="titleInput" autocomplete="off">
+                    <button id="titleButton" class="btn btn-primary btn-sm">Change</button>
+                </div>
+                <div class="accordion" id="accordionExample">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                Description
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse"
+                            data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <textarea id="accordionTextArea" cols="30" rows="5"></textarea>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <ul class="elementInfo_text"></ul>
             </div>

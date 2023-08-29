@@ -27,7 +27,7 @@
     padding-left: 20px;
 }
 .infoPanel {
-    min-width: 300px;
+    width: 340px;
     height: 500px;
     background-color: grey;
     padding-right: 20px;
@@ -45,4 +45,7 @@
     background-repeat: no-repeat;
     background-position: 50% 50%;
     background-color: transparent;
+}
+.accordion-button {
+    padding: 5px !important;
 }
