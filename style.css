@@ -46,6 +46,12 @@
     background-position: 50% 50%;
     background-color: transparent;
 }
+.gitElement {
+    background-color: #0d6efd;
+    padding-left: 6px;
+    border-radius: 4px;
+}
 .accordion-button {
-    padding: 5px !important;
+    --bs-accordion-btn-padding-y: 5px;
+    padding: var(--bs-accordion-btn-padding-y);
 }

@@ -24,7 +24,8 @@ const gitReq = document.getElementById("gitReq");
 const urlImput = document.getElementById("urlImput");
 urlImput.value = 'agazipov/react-2023-05-25'; // **
 const urlSelector = document.getElementById("urlSelector");
-const gitPanel = document.getElementById("gitPanel");
+const gitPanelButton = document.getElementById("gitPanelButton");
+const gitElements = document.getElementById("gitElements");
 // канвас
 const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
@@ -481,11 +482,6 @@ center[0].addEventListener('click', () => {
     draw(valueX, valueY);
 });
 
-// открываем/скрываем панель элементов гита
-gitPanel.addEventListener('click', () => {
-    openGitPanel = !openGitPanel;
-    draw();
-});
 
 // сейвинг загрузинг
 saveButton.addEventListener('click', function () {
@@ -510,12 +506,17 @@ file.addEventListener('change', (event) => {
     reader.readAsText(file);
 });
 
+// открываем/скрываем панель элементов гита
+gitPanelButton.addEventListener('click', () => {
+    openGitPanel = !openGitPanel;
+    draw();
+});
 // запросинг
 gitReq.addEventListener('click', () => {
     fetch(`https://api.github.com/repos/${urlImput.value}/git/trees/main?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
-            gitTree = data.tree.filter(({ path, type }) => type === 'tree' && !path.includes('/'))
+            gitTree = data.tree.filter(({ path, type }) => type === 'tree' && !path.includes('/'));
             gitTree.forEach((element) => {
                 const newOption = document.createElement('option');
                 newOption.textContent = element.path;
@@ -536,12 +537,41 @@ urlSelector.addEventListener('change', (event) => {
         .then((response) => response.json())
         .then((data) => {
             gitBlob = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
+                const newElement = document.createElement('div');
+                newElement.textContent = path.substr(path.lastIndexOf('/') + 1).replace('.jsx', '');
+                newElement.className = 'gitElement';
+                gitElements.insertAdjacentElement('beforeEnd', newElement);
+
                 return { name: path.substr(path.lastIndexOf('/') + 1), x: canvas.width - 100, y: index * 15 };
-                // return path.includes('/') ? path.substr(path.lastIndexOf('/') + 1) : path;
             });
             console.log(gitBlob);
-            draw();
+            createTreeFromGit(data.tree);
         })
+});
+//переносим запрос в дерево
+function createTreeFromGit(arr) {
+    let node = {}; // записываем индекс в мейн массиве
+    arr.forEach((element) => {
+        let path = element.path.split('/'); // разбивка пути на массив ['app','api']
+        // инициализация (когда родителя нет)
+        if (path.length === 1) {
+            const obj = createNewContainer(root, element.path);
+            containers.push(obj);
+            node[element.path] = { index: containers.length - 1 }; // последний добавленый элемент
+            return;
+        };
+
+        const obj = createNewContainer(containers[node[path[path.length - 2]].index], path[path.length - 1]); // в парент передаем индекс родителя
+        // path[path.length - 2] предпоследний элемент указывает на родителя
+        containers.push(obj);
+        node[path[path.length - 1]] = { index: containers.length - 1 };
+    });
+    sortRecursion(root);
+    draw();
+};
+// обработка события элементов гита
+gitElements.addEventListener('click', (event) => {
+    console.log(`eventTarget`, event.target.innerText);
 });
 
 // функция рисования
@@ -572,10 +602,8 @@ function draw(x, y) {
         // отрисовываем контейнеры
         if (container.isOpen) {
             roundedRect(container, container.width + 30, container.height + 30);
-            // infoRect(container.x + 80, container.y + 3, 6, true);
         } else {
             roundedRect(container, container.width, container.height, 5);
-            // infoRect(container.x + 50, container.y + 3, 6);
         };
     });
 
@@ -598,7 +626,7 @@ function draw(x, y) {
 };
 
 // контейнер
-function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable }, width, height) {
+function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable, title }, width, height) {
 
     ctx.beginPath(); // Начните новый путь
     // отображение теней при свиче (*лаконичней)
@@ -646,8 +674,8 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable }, 
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    // ctx.fillText(title, x + 6, y + 12);
-    ctx.fillText(id.substr(0, 6), x + 6, y + 12);
+    ctx.fillText(title, x + 6, y + 12);
+    // ctx.fillText(id.substr(0, 6), x + 6, y + 12);
     isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
