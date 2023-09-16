@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css" type="text/css" />
-    <title>Canvas</title>
+    <title>TreeGenerator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
 </head>
@@ -15,24 +15,37 @@
     <div class="wrap">
         <header class="header">
             <h2>TreeGenerator</h2>
+            <div class="btn-group" role="group" aria-label="Basic example">
+                <button id="areaPlus" type="button" class="btn btn-primary btn-sm">+AREA</button>
+                <button id="areaMinus" type="button" class="btn btn-primary btn-sm">-AREA</button>
+              </div>
         </header>
 
         <main class="main">
             <div class="controlPanel">
-                <div class="mb-3 mt-3">
-                    <button id="addChild" type="button" class="btn btn-primary btn-sm">Add child</button>
-                    <button id="swithParent" type="button" class="btn btn-primary btn-sm">Switch Parent</button>
-                    <button id="delContainer" type="button" class="btn btn-primary btn-sm">Delete Container</button>
+                <div class="mb-3 mt-3 controlPanel__btn-group">
+                    <div class="btn-group" role="group" aria-label="Basic example">
+                        <button id="addChild" type="button" class="btn btn-primary btn-sm">Add</button>
+                        <button id="delContainer" type="button" class="btn btn-primary btn-sm">Delete</button>
+                        <button id="swithParent" type="button" class="btn btn-primary btn-sm">Switch</button>
+                    </div>
                     <button id="clear" type="button" class="btn btn-primary btn-sm">Clear</button>
                 </div>
 
                 <div class="gitContainer mb-3">
-                    <input type="text" id="urlImput" autocomplete="off">
-                    <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
+                    <div class="input-group input-group-sm mb-3">
+                        <input type="text" id="gitUrlImputUser" class="form-control" placeholder="User"
+                            aria-label="User">
+                        <span class="input-group-text">/</span>
+                        <input type="text" id="gitUrlImputProject" class="form-control" placeholder="Project"
+                            aria-label="Project">
+                        <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
+                    </div>
+
                     <select name="urlSelector" id="urlSelector" class="form-select form-select-sm"
                         aria-label="Small select example">
+                        <option disabled selected>ChoiceDirectory</option>
                     </select>
-                    <button id="gitPanelButton" class="btn btn-primary btn-sm">GitPanel</button>
 
                     <div class="accordion" id="accordionExample">
                         <div class="accordion-item">
@@ -57,6 +70,7 @@
                 <canvas id="myCanvas" width="500" height="500" style="background-color: grey;"></canvas>
                 <div class="scaleContainer  mb-3">
                     <span id="spanScale">1</span>
+                    <!-- // заменить кнопки -->
                     <button id="increaseScale" class="customPadding btn btn-primary btn-sm" disabled>+</button>
                     <button id="decreaseScale" class="customPadding btn btn-primary btn-sm">-</button>
                 </div>

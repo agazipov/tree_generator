@@ -21,10 +21,11 @@ const saveButton = document.getElementById("saveButton");
 const file = document.getElementById("file");
 // гит
 const gitReq = document.getElementById("gitReq");
-const urlImput = document.getElementById("urlImput");
-urlImput.value = 'agazipov/react-2023-05-25'; // **
+const urlImputUser = document.getElementById("gitUrlImputUser");
+const urlImputProject = document.getElementById("gitUrlImputProject");
+urlImputUser.value = 'agazipov'; // **
+urlImputProject.value = 'react-2023-05-25'; // **
 const urlSelector = document.getElementById("urlSelector");
-const gitPanelButton = document.getElementById("gitPanelButton");
 const gitElements = document.getElementById("gitElements");
 // канвас
 const canvas = document.getElementById("myCanvas");
@@ -32,6 +33,23 @@ const ctx = canvas.getContext("2d");
 const rect = canvas.getBoundingClientRect();
 const elementInfo = document.getElementsByClassName("elementInfo_text");
 const center = document.getElementsByClassName("centralization");
+
+// area
+const areaPlus = document.getElementById("areaPlus");
+const areaMinus = document.getElementById("areaMinus");
+areaPlus.addEventListener('click', areaChange);
+areaMinus.addEventListener('click', areaChange);
+function areaChange(event) {
+    if (event.target.id === "areaPlus") {
+        root.area += 100;
+    }
+    if (event.target.id === "areaMinus") {
+        root.area -= 100;
+    }
+    sortRecursion(root);
+    draw();
+    infoPanelFilling();
+}
 
 class Container {
     constructor(width, height, y, x, level, id, isActiv, parentId, title) {
@@ -73,9 +91,6 @@ let startDragX = 0;
 let startDragY = 0;
 let offsetX = 0;
 let offsetY = 0;
-
-let dragIndex = null;
-let openGitPanel = false;
 
 // генерация полей нового контейнера (принимает родителя, здесь активный контейнер)
 function createNewContainer(parent, title) {
@@ -170,17 +185,20 @@ function tranformPriority(arr) {
 };
 
 // добавить ребенка
-buttonChild.addEventListener("click", () => {
+function addChild(event) {
     if (!activContainer) {
         console.log(`Нет активного контейнера`);
         return;
     };
-    const obj = createNewContainer(activContainer, 'Name');
+    let check = event.target.id === 'addChild' ? 'Name' : event.target.innerText;
+    const obj = createNewContainer(activContainer, check);
     containers.push(obj);
     sortRecursion(root);
     draw();
     infoPanelFilling();
-});
+}
+// обработка клика кнопки add
+buttonChild.addEventListener("click", addChild);
 
 // удаляем контейнер
 // зачистка родительского контейнера от удаленного ребенка (находим глобальный индекс родителя)
@@ -335,7 +353,7 @@ function infoPanelFilling(clear = false) {
         return;
     };
     elementInfo[0].innerHTML = '';
-    const nameArray = ['id', 'child', 'branch'] // ** фиксировать изменения из change
+    const nameArray = ['id', 'area', 'child', 'branch'] // ** фиксировать изменения из change
     for (let index = 0; index < nameArray.length; index++) {
         switch (nameArray[index]) {
             case 'branch':
@@ -359,11 +377,6 @@ function infoPanelFilling(clear = false) {
     };
 };
 canvas.addEventListener("click", (event) => {
-    // выход из собыытия клика при перемещении гитовых элементов (не меняет активный контейнер)
-    if (dragIndex !== null) {
-        dragIndex = null;
-        return;
-    };
     const clickX = (event.clientX - rect.left) * scaleModify - offsetX;
     const clickY = (event.clientY - rect.top) * scaleModify - offsetY;
 
@@ -386,8 +399,8 @@ canvas.addEventListener("click", (event) => {
                 console.log(`activContainer`, activContainer);
             } else {
                 object.isActiv = false;
-            };
-        });
+            }
+        })
     } else {
         containers.forEach((object) => {
             if (
@@ -402,9 +415,9 @@ canvas.addEventListener("click", (event) => {
                 } else {
                     serchParentIsBranch(null); // ** дублирование
                     switchParent(object);
-                };
-            };
-        });
+                }
+            }
+        })
     }
     draw();
 });
@@ -412,27 +425,11 @@ canvas.addEventListener("click", (event) => {
 // перемещение
 let savePositionX, savePositionY;
 canvas.addEventListener('mousedown', (event) => {
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
     if (event.button === 3) { // Проверяем нажатие правой кнопки мыши
         isDragging = true;
         startDragX = event.clientX;
         startDragY = event.clientY;
     }
-
-    // перемещаем гитовые элементы
-    gitBlob.forEach((element, index) => {
-        if (
-            clickX >= element.x &&
-            clickX <= element.x + 100 &&
-            clickY >= element.y &&
-            clickY <= element.y + 16
-        ) {
-            dragIndex = index;
-            savePositionX = element.x;
-            savePositionY = element.y;
-        };
-    });
 });
 canvas.addEventListener('mousemove', (event) => {
     const dx = event.clientX - startDragX; // Смещение по оси X
@@ -443,36 +440,12 @@ canvas.addEventListener('mousemove', (event) => {
         offsetX += dx;
         offsetY += dy;
         draw(dx, dy);
-    };
-
-    if (dragIndex !== null) {
-        gitBlob[dragIndex].x = event.clientX - rect.left - 50;
-        gitBlob[dragIndex].y = event.clientY - rect.top - 9;
-        draw();
-    };
+    }
 });
 canvas.addEventListener('mouseup', (event) => {
     if (event.button === 3) { // Проверяем отпускание правой кнопки мыши
         isDragging = false;
-    };
-
-    if (dragIndex !== null) {
-        containers.forEach((container) => {
-            if (
-                gitBlob[dragIndex].x + 50 >= container.x &&
-                gitBlob[dragIndex].x + 50 <= container.x + 50 &&
-                gitBlob[dragIndex].y + 9 >= container.y &&
-                gitBlob[dragIndex].y + 9 <= container.y + 18
-            ) {
-                const obj = createNewContainer(container, gitBlob[dragIndex].name);
-                containers.push(obj);
-            };
-        });
-        gitBlob[dragIndex].x = savePositionX;
-        gitBlob[dragIndex].y = savePositionY
-        sortRecursion(root);
-        draw();
-    };
+    }
 });
 //централизация
 center[0].addEventListener('click', () => {
@@ -506,14 +479,9 @@ file.addEventListener('change', (event) => {
     reader.readAsText(file);
 });
 
-// открываем/скрываем панель элементов гита
-gitPanelButton.addEventListener('click', () => {
-    openGitPanel = !openGitPanel;
-    draw();
-});
 // запросинг
 gitReq.addEventListener('click', () => {
-    fetch(`https://api.github.com/repos/${urlImput.value}/git/trees/main?recursive=1`)
+    fetch(`https://api.github.com/repos/${urlImputUser.value}/${urlImputProject.value}/git/trees/main?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
             gitTree = data.tree.filter(({ path, type }) => type === 'tree' && !path.includes('/'));
@@ -522,7 +490,6 @@ gitReq.addEventListener('click', () => {
                 newOption.textContent = element.path;
                 urlSelector.insertAdjacentElement('afterbegin', newOption);
             });
-            console.log(gitTree);
         })
 
 });
@@ -532,8 +499,8 @@ urlSelector.addEventListener('change', (event) => {
         if (path === event.target.value) {
             shaTree = sha;
         }
-    });
-    fetch(`https://api.github.com/repos/${urlImput.value}/git/trees/${shaTree}?recursive=1`)
+    })
+    fetch(`https://api.github.com/repos/${urlImputUser.value}/${urlImputProject.value}/git/trees/${shaTree}?recursive=1`)
         .then((response) => response.json())
         .then((data) => {
             gitBlob = data.tree.filter(({ path, type }) => type === 'blob' && path.includes('.jsx')).map(({ path }, index) => {
@@ -541,10 +508,7 @@ urlSelector.addEventListener('change', (event) => {
                 newElement.textContent = path.substr(path.lastIndexOf('/') + 1).replace('.jsx', '');
                 newElement.className = 'gitElement';
                 gitElements.insertAdjacentElement('beforeEnd', newElement);
-
-                return { name: path.substr(path.lastIndexOf('/') + 1), x: canvas.width - 100, y: index * 15 };
             });
-            console.log(gitBlob);
             createTreeFromGit(data.tree);
         })
 });
@@ -570,9 +534,7 @@ function createTreeFromGit(arr) {
     draw();
 };
 // обработка события элементов гита
-gitElements.addEventListener('click', (event) => {
-    console.log(`eventTarget`, event.target.innerText);
-});
+gitElements.addEventListener('click', addChild);
 
 // функция рисования
 function draw(x, y) {
@@ -604,24 +566,7 @@ function draw(x, y) {
             roundedRect(container, container.width + 30, container.height + 30);
         } else {
             roundedRect(container, container.width, container.height, 5);
-        };
-    });
-
-    openGitPanel && gitBlob.forEach(({ name, x, y }) => {
-        ctx.beginPath();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "black";
-        ctx.fillRect(x - 2, y + 2, 104, 16);
-        ctx.clearRect(x, y + 4, 100, 14);
-        ctx.fillStyle = "#ADADAD";
-        ctx.fillRect(x, y + 4, 100, 14);
-        ctx.fill();
-        ctx.font = "bold 12px arial";
-        ctx.fillStyle = "black";
-        ctx.textAlign = "start";
-        ctx.fillText(name, x + 10, y + 15);
-        ctx.closePath();
+        }
     });
 };
 
