@@ -25,6 +25,7 @@
                     <button id="delContainer" type="button" class="btn btn-primary btn-sm">Delete Container</button>
                     <button id="clear" type="button" class="btn btn-primary btn-sm">Clear</button>
                 </div>
+
                 <div class="gitContainer mb-3">
                     <input type="text" id="urlImput" autocomplete="off">
                     <button id="gitReq" class="btn btn-primary btn-sm">Response</button>
@@ -32,7 +33,7 @@
                         aria-label="Small select example">
                     </select>
                     <button id="gitPanelButton" class="btn btn-primary btn-sm">GitPanel</button>
-                    
+
                     <div class="accordion" id="accordionExample">
                         <div class="accordion-item">
                             <h2 class="accordion-header">
@@ -44,52 +45,56 @@
                             <div id="collapseOne" class="accordion-collapse collapse"
                                 data-bs-parent="#accordionExample">
                                 <div class="accordion-body">
-                                    <div id="gitElements"></div>
+                                    <div id="gitElements" class="gitAccordionContent"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="scaleCpntainer  mb-3">
-                    <span>Scale: <span id="spanScale">1</span></span>
-                    <button id="increaseScale" class="btn btn-primary btn-sm" disabled>+</button>
-                    <button id="decreaseScale" class="btn btn-primary btn-sm">-</button>
+            </div>
+
+            <div class="canvasPanel position-relative">
+                <canvas id="myCanvas" width="500" height="500" style="background-color: grey;"></canvas>
+                <div class="scaleContainer  mb-3">
+                    <span id="spanScale">1</span>
+                    <button id="increaseScale" class="customPadding btn btn-primary btn-sm" disabled>+</button>
+                    <button id="decreaseScale" class="customPadding btn btn-primary btn-sm">-</button>
                 </div>
+                <button class="centralization"></button>
+            </div>
+
+            <div class="infoPanel">
+                <div>
+                    <h3>Element Info</h3>
+                    <div class="titleContainer mb-3">
+                        <span>Title: </span>
+                        <input type="text" id="titleInput" autocomplete="off">
+                        <button id="titleButton" class="btn btn-primary btn-sm">Change</button>
+                    </div>
+                    <div class="accordion" id="accordionExample">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseOne">
+                                    Description
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                    <textarea id="accordionTextArea" cols="30" rows="5"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="elementInfo_text"></ul>
+                </div>
+
                 <div class="saveFileContainer">
                     <label for="file" class="form-label">Upload your tree (.json)</label>
                     <input type="file" id="file" class="form-control form-control-sm">
                     <button id="saveButton" class="btn btn-primary btn-sm">Save</button>
                 </div>
-            </div>
-
-            <div class="position-relative">
-                <canvas id="myCanvas" width="500" height="500" style="background-color: grey;"></canvas>
-                <button class="centralization"></button>
-            </div>
-
-            <div class="infoPanel">
-                <h3>Element Info</h3>
-                <div class="titleContainer mb-3">
-                    <span>Title: </span>
-                    <input type="text" id="titleInput" autocomplete="off">
-                    <button id="titleButton" class="btn btn-primary btn-sm">Change</button>
-                </div>
-                <div class="accordion" id="accordionExample">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                Description
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
-                                <textarea id="accordionTextArea" cols="30" rows="5"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <ul class="elementInfo_text"></ul>
             </div>
         </main>
 

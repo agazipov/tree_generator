@@ -241,7 +241,7 @@ accordionTextArea.addEventListener("change", (event) => {
     activContainer.description = event.target.value;
 });
 
-// масштабирование
+// масштабирование ** не работает с перемещением
 increaseScale.addEventListener("click", () => {
     // scale = 1.333;
     scale = 2;
