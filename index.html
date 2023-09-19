@@ -18,7 +18,7 @@
             <div class="btn-group" role="group" aria-label="Basic example">
                 <button id="areaPlus" type="button" class="btn btn-primary btn-sm">+AREA</button>
                 <button id="areaMinus" type="button" class="btn btn-primary btn-sm">-AREA</button>
-              </div>
+            </div>
         </header>
 
         <main class="main">
@@ -80,11 +80,13 @@
             <div class="infoPanel">
                 <div>
                     <h3>Element Info</h3>
-                    <div class="titleContainer mb-3">
-                        <span>Title: </span>
-                        <input type="text" id="titleInput" autocomplete="off">
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text" id="basic-addon1">Title:</span>
+                        <input id="titleInput" type="text" class="form-control" aria-label="Username"
+                            aria-describedby="basic-addon1">
                         <button id="titleButton" class="btn btn-primary btn-sm">Change</button>
                     </div>
+
                     <div class="accordion" id="accordionExample">
                         <div class="accordion-item">
                             <h2 class="accordion-header">

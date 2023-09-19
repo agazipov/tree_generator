@@ -61,7 +61,6 @@ class Container {
         this.id = id;
         this.isBranch = false;
         this.isActiv = isActiv;
-        this.isOpen = false;
         this.isDisable = false;
         this.level = level;
         this.child = [];
@@ -542,41 +541,36 @@ function draw(x, y) {
     (x || y) && ctx.translate(x, y);
     drawGrid(); // сетка
 
-    containers.forEach(container => { // ** багуля с отрисовкой при смене родителя
-        // отрисовываем линии
-        container.child.forEach((childId) => {
-            // поиск дочерних у родителя на нижнем уровне
-            const findContainer = containers.find((container) => container.id === childId);
-            if (findContainer) {
-                ctx.globalAlpha = 1;
-                ctx.beginPath();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-                ctx.shadowBlur = 0;
-                ctx.moveTo(container.x + 23, container.y + 9);
-                ctx.lineTo(findContainer.x + 23, findContainer.y + 9);
-                (findContainer.isBranch || findContainer.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.closePath();
-            }
-        });
+    // отрисовываем линии
+    serchChilds(root, drawLine);
 
+    containers.forEach(container => {
         // отрисовываем контейнеры
-        if (container.isOpen) {
-            roundedRect(container, container.width + 30, container.height + 30);
-        } else {
-            roundedRect(container, container.width, container.height, 5);
-        }
+        roundedRect(container);
     });
 };
 
-// контейнер
-function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable, title }, width, height) {
+// рисовальня линий
+function drawLine(container, foundChild) {
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+        ctx.moveTo(container.x + 23, container.y + 9);
+        ctx.lineTo(foundChild.x + 23, foundChild.y + 9);
+        (foundChild.isBranch || foundChild.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.closePath();
+};
+
+// отрисовка контейнера
+function roundedRect({ ...param}) {
 
     ctx.beginPath(); // Начните новый путь
     // отображение теней при свиче (*лаконичней)
     if (
-        (isSwitch && !isDisable) &&
+        (isSwitch && !param.isDisable) &&
         (isSwitch && id !== activContainer.id) &&
         (isSwitch && id !== activContainer.parentId)
     ) {
@@ -591,25 +585,25 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable, ti
     ctx.strokeStyle = 'black';
     ctx.lineWidth = 2;
     ctx.lineJoin = "round";
-    ctx.moveTo(x, y); // Начало пути в верхнем левом углу прямоугольника
-    ctx.lineTo(x + width, y); // Рисуем линию от левого верхнего угла до правого верхнего угла
-    ctx.lineTo(x + width, y + height); // Рисуем линию в правый нижний угол
-    ctx.lineTo(x, y + height); // Рисуем линию в нижний левый угол
-    ctx.lineTo(x, y); // Рисуем линию в левый верхний угол
+    ctx.moveTo(param.x, param.y); // Начало пути в верхнем левом углу прямоугольника
+    ctx.lineTo(param.x + param.width, param.y); // Рисуем линию от левого верхнего угла до правого верхнего угла
+    ctx.lineTo(param.x + param.width, param.y + param.height); // Рисуем линию в правый нижний угол
+    ctx.lineTo(param.x, param.y + param.height); // Рисуем линию в нижний левый угол
+    ctx.lineTo(param.x, param.y); // Рисуем линию в левый верхний угол
     ctx.stroke(); // Закончите путь
     // ctx.fillRect(x, y, width, height);
 
     // прозрачность при дизейдле
-    if (isDisable) {
+    if (param.isDisable) {
         ctx.globalAlpha = 0.3;
     } else {
         ctx.globalAlpha = 1;
     };
 
     // Заполните прямоугольник с заданным цветом
-    if (isActiv) {
+    if (param.isActiv) {
         ctx.fillStyle = "red";
-    } else if (isBranch) {
+    } else if (param.isBranch) {
         ctx.fillStyle = "green";
     } else {
         ctx.fillStyle = 'white';
@@ -619,9 +613,8 @@ function roundedRect({ x, y, isActiv, isBranch, isOpen, child, id, isDisable, ti
     ctx.font = "10px Arial";
     ctx.fillStyle = "black";
     ctx.textAlign = "start";
-    ctx.fillText(title, x + 6, y + 12);
+    ctx.fillText(param.title, param.x + 6, param.y + 12);
     // ctx.fillText(id.substr(0, 6), x + 6, y + 12);
-    isOpen && ctx.fillText(`Child: ${child.length}`, x + 6, y + 24)
 };
 
 // инфо
