@@ -39,6 +39,7 @@ const areaPlus = document.getElementById("areaPlus");
 const areaMinus = document.getElementById("areaMinus");
 areaPlus.addEventListener('click', areaChange);
 areaMinus.addEventListener('click', areaChange);
+
 function areaChange(event) {
     if (event.target.id === "areaPlus") {
         root.area += 100;
@@ -55,7 +56,6 @@ class Container {
     constructor(width, height, y, x, level, id, isActiv, parentId, title) {
         this.width = width;
         this.height = height;
-        this.area = 500;
         this.x = x;
         this.y = y;
         this.id = id;
@@ -67,6 +67,7 @@ class Container {
         this.parentId = parentId;
         this.title = title;
         this.description = 'description';
+        this.countLeavesArea = 0; // **
     }
 };
 
@@ -146,42 +147,39 @@ function disableContainer(_parent, child) {
 }
 
 // сортировка массива
-function sortRecursion(container) {
+function countingLeavesArea(container) {
+    if (container.child.length === 0) {
+        container.countLeavesArea = 30;
+        return 30;
+    };
+    container.countLeavesArea = 0;
+    // ищем листья
+    container.child.forEach((childId, index) => {
+        const foundChild = serchParam(childId, containers, 'childFound');
+        container.countLeavesArea += countingLeavesArea(foundChild);
+    });
+    return container.countLeavesArea;
+}
+function assignmentCoordinates(container) {
     if (container.child.length === 0) {
         return;
     };
-    // сохраняем количество детей
-    const lengthChild = [];
-    container.child.forEach((childId) => {
-        const foundChild = serchParam(childId, containers, 'childFound');
-        lengthChild.push(foundChild.child.length);
-    });
-    const priorityChild = tranformPriority(lengthChild); // конвертируем количество детей в приоритет
-    const areaPriority = priorityChild.reduce((acc, element) => acc + element); // сумма приоритетов
     // назначение координат
     let count = 0;
     container.child.forEach((childId, index) => {
         const foundChild = serchParam(childId, containers, 'childFound');
         foundChild.x = 75 * container.level; // изменение х от уровня
-        foundChild.area = container.area / areaPriority * priorityChild[index]; // расчет занимаймой контенером зоны
         //  помещаем контенер в середину его зоны (относительно его родителя)
-        count += foundChild.area / 2;
-        foundChild.y = (container.y - (container.area / 2)) + count; // распределяет относительно оцовского контенера
-        count += foundChild.area / 2;
-        sortRecursion(foundChild);
+        count += foundChild.countLeavesArea / 2;
+        foundChild.y = (container.y - (container.countLeavesArea / 2)) + count; // распределяет относительно отцовского контенера
+        count += foundChild.countLeavesArea / 2;
+        assignmentCoordinates(foundChild);
     });
-};
-function tranformPriority(arr) {
-    return arr.map((element) => {
-        let count = 1;
-        arr.forEach((element2) => {
-            if (element > element2) {
-                count += 1;
-            };
-        });
-        return count;
-    });
-};
+}
+function sortRecursion(container) {
+    countingLeavesArea(container);
+    assignmentCoordinates(container);
+}
 
 // добавить ребенка
 function addChild(event) {
@@ -352,7 +350,7 @@ function infoPanelFilling(clear = false) {
         return;
     };
     elementInfo[0].innerHTML = '';
-    const nameArray = ['id', 'area', 'child', 'branch'] // ** фиксировать изменения из change
+    const nameArray = ['id', 'area', 'child', 'branch', `countLeavesArea`] // ** фиксировать изменения из change
     for (let index = 0; index < nameArray.length; index++) {
         switch (nameArray[index]) {
             case 'branch':
@@ -552,27 +550,27 @@ function draw(x, y) {
 
 // рисовальня линий
 function drawLine(container, foundChild) {
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-        ctx.shadowBlur = 0;
-        ctx.moveTo(container.x + 23, container.y + 9);
-        ctx.lineTo(foundChild.x + 23, foundChild.y + 9);
-        (foundChild.isBranch || foundChild.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.closePath();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+    ctx.shadowBlur = 0;
+    ctx.moveTo(container.x + 23, container.y + 9);
+    ctx.lineTo(foundChild.x + 23, foundChild.y + 9);
+    (foundChild.isBranch || foundChild.isActiv) ? ctx.strokeStyle = 'green' : ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
 };
 
 // отрисовка контейнера
-function roundedRect({ ...param}) {
+function roundedRect({ ...param }) {
 
     ctx.beginPath(); // Начните новый путь
     // отображение теней при свиче (*лаконичней)
     if (
         (isSwitch && !param.isDisable) &&
-        (isSwitch && id !== activContainer.id) &&
-        (isSwitch && id !== activContainer.parentId)
+        (isSwitch && param.id !== activContainer.id) &&
+        (isSwitch && param.id !== activContainer.parentId)
     ) {
         ctx.shadowColor = '#0a58ca';
         ctx.shadowBlur = 12;
