@@ -11,7 +11,6 @@ const titleInput = document.getElementById("titleInput");
 const titleButton = document.getElementById("titleButton");
 // редактирование описания
 const accordionTextArea = document.getElementById("accordionTextArea");
-// const descriptionButton = document.getElementById("titleButton");
 // масштаб
 const increaseScale = document.getElementById("increaseScale");
 const decreaseScale = document.getElementById("decreaseScale");
