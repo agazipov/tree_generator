@@ -28,8 +28,7 @@
 }
 
 .controlPanel {
-    min-width: 330px;
-    width: 400px;
+    min-width: 400px;
     height: 500px;
     background-color: grey;
     padding-right: 20px;
@@ -62,7 +61,7 @@
     border: none;
     width: 18px;
     height: 18px;
-    background-image: url(src/move_100170.svg);
+    background-image: url(public/move_100170.svg);
     background-repeat: no-repeat;
     background-position: 50% 50%;
     background-color: transparent;
