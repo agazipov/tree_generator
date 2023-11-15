@@ -1,8 +1,8 @@
 import { serchChilds } from "./arrayFunction.js"
 
 // функция рисования
-export function draw(x, y, offsetX, offsetY, scaleModify, root, arr, isSwitch, canvas, ctx, activContainer) {
-    ctx.clearRect(0 - offsetX, 0 - offsetY, canvas.width * scaleModify, canvas.height * scaleModify); // Очищаем холст
+export function draw(x, y, offsetX, offsetY, scaleModify, root, arr, isSwitch, rect, ctx, activContainer) {
+    ctx.clearRect(0 - offsetX, 0 - offsetY, rect.width * scaleModify, rect.height * scaleModify); // Очищаем холст
     (x || y) && ctx.translate(x, y);
     // drawGrid(); // сетка
 

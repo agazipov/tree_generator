@@ -97,3 +97,71 @@ export function serchParentIsBranch(container, arr) {
         serchParentIsBranch(parentContainer, arr);
     };
 };
+// изменение уровня и сброс  прозрачности
+export function changeLevel(parent, child) {
+    child.level = parent.level + 1;
+    child.isDisable = false;
+};
+// дизайбл контенера
+export function disableContainer(_parent, child) {
+    child.isDisable = true;
+}
+
+// назначение активного контейнера
+export function handleActivContainer(object, arr, sub, activContainer) {
+    if (object?.id === arr[0].id || object === null) {
+        sub.buttonSwithParent.disabled = true;
+    } else {
+        sub.buttonSwithParent.disabled = false;
+    };
+    if (object) {
+        object.isActiv = true;
+        infoPanelFilling(arr, sub, activContainer, (object === null));
+        return object;
+    };
+    infoPanelFilling(arr, sub, activContainer, (object === null));
+};
+
+// вывод инфы об активном контенере 
+export function infoPanelFilling(arr, sub, activContainer, clear = false) {
+    if (clear) {
+        sub.titleInput.value = '';
+        sub.elementInfo[0].innerHTML = '';
+        return;
+    };
+    sub.elementInfo[0].innerHTML = '';
+    const nameArray = ['id', 'child', 'branch', `countLeavesArea`] // ** фиксировать изменения из change
+    for (let index = 0; index < nameArray.length; index++) {
+        switch (nameArray[index]) {
+            case 'branch':
+                const branchNameParent = arr.filter((el) => el.isBranch === true).map(el => el.id).join(', \n');
+                const listParents = document.createElement('li');
+                listParents.textContent = `Parents: \n ${branchNameParent}`;
+                sub.elementInfo[0].insertAdjacentElement('beforeend', listParents);
+                break;
+            case 'child':
+                const branchName = activContainer.child.join(', \n');
+                const lisstChilds = document.createElement('li');
+                lisstChilds.textContent = `Childs: \n ${branchName}`;
+                sub.elementInfo[0].insertAdjacentElement('beforeend', lisstChilds);
+                break;
+            default:
+                const property = document.createElement('li');
+                property.textContent = `${nameArray[index]}: ` + activContainer[nameArray[index]];
+                sub.elementInfo[0].insertAdjacentElement('beforeend', property);
+                break;
+        };
+    };
+};
+
+export function switchParent(object, arr, sub, root, activContainer, isSwitch) {
+    clearParentContainerForChild(activContainer, arr); // удаляем инфу о ребенке в родительском контейнере
+    activContainer.parentId = object.id; // назначаем выделенному контенеру контенер-родитель
+    object.child.push(activContainer.id); // добавляем контейнеру в дети активный контенер
+    sub.buttonSwithParent.textContent = 'Switch Parent';
+    isSwitch = !isSwitch;   // дизейбл функции кнопки для клика
+    serchChilds(object, changeLevel, arr); // меняем уровень у контенера и детей ** засунуть в сортировку
+    sortRecursion(root, arr);  // сортировка
+    serchParentIsBranch(activContainer, arr); // обнуляем путь у массива
+    infoPanelFilling(arr, sub,  activContainer, object);
+};

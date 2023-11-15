@@ -3,48 +3,24 @@ import { Container } from "./сlass.js";
 import {
     sortRecursion,
     serchChilds,
-    serchParam,
     delBranch,
     clearParentContainerForChild,
-    serchParentIsBranch
+    serchParentIsBranch,
+    changeLevel,
+    disableContainer,
+    handleActivContainer,
+    infoPanelFilling,
+    switchParent
 } from "./arrayFunction.js"
 import { nanoid } from "./nanoid.js";
 import { sub } from "./subscription.js";
 
-// управление
-const buttonChild = document.getElementById("addChild");
-const buttonSwithParent = document.getElementById("swithParent");
-const buttonDelete = document.getElementById("delContainer");
-const buttonClear = document.getElementById("clear");
-// редактирование заголовка
-const titleInput = document.getElementById("titleInput");
-const titleButton = document.getElementById("titleButton");
-// редактирование описания
-const accordionTextArea = document.getElementById("accordionTextArea");
-// масштаб
-const increaseScale = document.getElementById("increaseScale");
-const decreaseScale = document.getElementById("decreaseScale");
-const spanScale = document.getElementById("spanScale");
-// файлы
-const saveButton = document.getElementById("saveButton");
-const file = document.getElementById("file");
-// обработка запросов
-// гит
-const urlImputUser = document.getElementById("gitUrlImputUser");
-const urlImputProject = document.getElementById("gitUrlImputProject");
 sub.urlImputUser.value = 'agazipov'; // **
 sub.urlImputProject.value = 'react-2023-05-25'; // **
-const gitReq = document.getElementById("gitReq");
-const urlSelector = document.getElementById("urlSelector");
-const gitElements = document.getElementById("gitElements");
-// канвас
-const canvas = document.getElementById("myCanvas");
+
 const ctx = sub.ctx();
 const rect = sub.rect();
-const elementInfo = document.getElementsByClassName("elementInfo_text");
-const center = document.getElementsByClassName("centralization");
 
-// const root = new Container(46, 18, rect.height / 2 - 9, 20, 1, nanoid(), true, 'parentID', 'root');
 const initialContainer = new Container(1, '', 'initial', 'initial');
 const root = initialContainer.createRoot(rect.height, nanoid)
 
@@ -67,16 +43,6 @@ let startDragY = 0;
 let offsetX = 0;
 let offsetY = 0;
 
-// изменение уровня и сброс  прозрачности
-function changeLevel(parent, child) {
-    child.level = parent.level + 1;
-    child.isDisable = false;
-};
-// дизайбл контенера
-function disableContainer(_parent, child) {
-    child.isDisable = true;
-}
-
 // добавить ребенка
 function addChild(event) {
     if (!activContainer) {
@@ -87,8 +53,8 @@ function addChild(event) {
     const obj = initialContainer.createNewContainer(activContainer, check, nanoid);
     containers.push(obj);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
-    infoPanelFilling();
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    infoPanelFilling(containers, sub, activContainer);
 }
 // обработка клика кнопки add
 sub.buttonChild.addEventListener("click", addChild);
@@ -105,30 +71,30 @@ sub.buttonDelete.addEventListener("click", () => {
     };
     delBranch(activContainer, containers);
     clearParentContainerForChild(activContainer, containers);
-    handleActivContainer(null);
+    handleActivContainer(null, containers, sub, activContainer);
     serchParentIsBranch(null, containers);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 
 // очистка
 sub.buttonClear.addEventListener("click", () => {
     containers.length = 1;
     containers[0].child.length = 0;
-    handleActivContainer(root);
+    activContainer =  handleActivContainer(root, containers, sub, activContainer);
     sub.titleInput.value = root;
     scale = 1;
     sub.spanScale.innerText = scale;
     const valueX = -offsetX, valueY = -offsetY;
     offsetX = 0;
     offsetY = 0;
-    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 
 // редактирование
 sub.titleButton.addEventListener("click", () => {
     activContainer.title = sub.titleInput.value;
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 sub.accordionTextArea.addEventListener("change", (event) => {
     activContainer.description = event.target.value;
@@ -146,7 +112,7 @@ sub.increaseScale.addEventListener("click", () => {
     root.y = rect.height / 2 - 9;
     ctx.scale(scale, scale);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 sub.decreaseScale.addEventListener("click", () => {
     // scale = 0.75;
@@ -159,7 +125,7 @@ sub.decreaseScale.addEventListener("click", () => {
     root.y = rect.height - 9;
     ctx.scale(scale, scale);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 
 // смена родителя (принимает компонент на который перенесли)
@@ -176,71 +142,17 @@ sub.buttonSwithParent.addEventListener("click", () => {
             container.isDisable = false;
         });
     };
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
-function switchParent(object) {
-    clearParentContainerForChild(activContainer, containers); // удаляем инфу о ребенке в родительском контейнере
-    activContainer.parentId = object.id; // назначаем выделенному контенеру контенер-родитель
-    object.child.push(activContainer.id); // добавляем контейнеру в дети активный контенер
-    sub.buttonSwithParent.textContent = 'Switch Parent';
-    isSwitch = !isSwitch;   // дизейбл функции кнопки для клика
-    serchChilds(object, changeLevel, containers); // меняем уровень у контенера и детей ** засунуть в сортировку
-    sortRecursion(root, containers);  // сортировка
-    serchParentIsBranch(activContainer, containers); // обнуляем путь у массива
-    infoPanelFilling();
-};
 
 
-// назначение активного контейнера
-function handleActivContainer(object) {
-    if (object?.id === containers[0].id || object === null) {
-        sub.buttonSwithParent.disabled = true;
-    } else {
-        sub.buttonSwithParent.disabled = false;
-    };
-    activContainer = object;
-    if (activContainer) {
-        activContainer.isActiv = true;
-    };
-    infoPanelFilling((object === null));
-};
-handleActivContainer(root);
-// вывод инфы об активном контенере 
-function infoPanelFilling(clear = false) {
-    if (clear) {
-        sub.titleInput.value = '';
-        sub.elementInfo[0].innerHTML = '';
-        return;
-    };
-    sub.elementInfo[0].innerHTML = '';
-    const nameArray = ['id', 'child', 'branch', `countLeavesArea`] // ** фиксировать изменения из change
-    for (let index = 0; index < nameArray.length; index++) {
-        switch (nameArray[index]) {
-            case 'branch':
-                const branchNameParent = containers.filter((el) => el.isBranch === true).map(el => el.id).join(', \n');
-                const listParents = document.createElement('li');
-                listParents.textContent = `Parents: \n ${branchNameParent}`;
-                sub.elementInfo[0].insertAdjacentElement('beforeend', listParents);
-                break;
-            case 'child':
-                const branchName = activContainer.child.join(', \n');
-                const lisstChilds = document.createElement('li');
-                lisstChilds.textContent = `Childs: \n ${branchName}`;
-                sub.elementInfo[0].insertAdjacentElement('beforeend', lisstChilds);
-                break;
-            default:
-                const property = document.createElement('li');
-                property.textContent = `${nameArray[index]}: ` + activContainer[nameArray[index]];
-                sub.elementInfo[0].insertAdjacentElement('beforeend', property);
-                break;
-        };
-    };
-};
+activContainer = handleActivContainer(root, containers, sub, activContainer);
+
 sub.canvas.addEventListener("click", (event) => {
     const clickX = (event.clientX - rect.left) * scaleModify - offsetX;
     const clickY = (event.clientY - rect.top) * scaleModify - offsetY;
     // Проверяем объекты на пересечение с кликом
-    !isSwitch && handleActivContainer(null); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
+    !isSwitch && handleActivContainer(null, containers, sub, activContainer); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
     if (!isSwitch) {
         serchParentIsBranch(null, containers);
         containers.forEach((object, _index, arr) => {
@@ -262,7 +174,7 @@ sub.canvas.addEventListener("click", (event) => {
                         sub.titleInput.value = object.title,
                         sub.accordionTextArea.value = object.description,
                         serchParentIsBranch(object, arr),
-                        handleActivContainer(object)
+                        activContainer = handleActivContainer(object, containers, sub, activContainer)
                     );
                 console.log(`activContainer`, activContainer);
             } else {
@@ -282,12 +194,12 @@ sub.canvas.addEventListener("click", (event) => {
                     return;
                 } else {
                     serchParentIsBranch(null, containers); // ** дублирование
-                    switchParent(object);
+                    switchParent(object, containers, sub, root, activContainer, isSwitch);
                 }
             }
         })
     }
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 
 // перемещение
@@ -306,7 +218,7 @@ sub.canvas.addEventListener('mousemove', (event) => {
         startDragY = event.clientY;
         offsetX += dx;
         offsetY += dy;
-        draw(dx, dy, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+        draw(dx, dy, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
     }
 });
 sub.canvas.addEventListener('mouseup', (event) => {
@@ -319,7 +231,7 @@ sub.center[0].addEventListener('click', () => {
     const valueX = -offsetX, valueY = -offsetY;
     offsetX = 0;
     offsetY = 0;
-    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
 });
 
 //репозиторий
@@ -352,7 +264,8 @@ sub.urlSelector.addEventListener('change', (event) => {
                 newElement.className = 'gitElement';
                 sub.gitElements.insertAdjacentElement('beforeEnd', newElement);
             });
-            createTreeFromGit(data.tree);
+            createTreeFromGit(data.tree, containers, initialContainer.createNewContainer, root);
+            draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
         })
 });
 
@@ -374,39 +287,38 @@ sub.file.addEventListener('change', (event) => {
         const parsedData = JSON.parse(contents);
 
         containers.push(...parsedData);
-        draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer)
+        draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer)
     };
 
     reader.readAsText(file);
 });
 
 //переносим запрос в дерево
-export function createTreeFromGit(arr) {
+export function createTreeFromGit(data, arr, callback, root) {
     let node = {}; // записываем индекс в мейн массиве
-    arr.forEach((element) => {
+    data.forEach((element) => {
         let path = element.path.split('/'); // разбивка пути на массив ['app','api']
         // инициализация (когда родителя нет)
         if (path.length === 1) {
-            const obj = initialContainer.createNewContainer(root, element.path, nanoid);
-            containers.push(obj);
-            node[element.path] = { index: containers.length - 1 }; // последний добавленый элемент
+            const obj = callback(root, element.path, nanoid);
+            arr.push(obj);
+            node[element.path] = { index: arr.length - 1 }; // последний добавленый элемент
             return;
         };
 
-        const obj = initialContainer.createNewContainer(
-            containers[node[path[path.length - 2]].index],
+        const obj = callback(
+            arr[node[path[path.length - 2]].index],
             path[path.length - 1],
             nanoid
         ); // в парент передаем индекс родителя
         // path[path.length - 2] предпоследний элемент указывает на родителя
-        containers.push(obj);
-        node[path[path.length - 1]] = { index: containers.length - 1 };
+        arr.push(obj);
+        node[path[path.length - 1]] = { index: arr.length - 1 };
     });
-    sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+    sortRecursion(root, arr);
 };
 // обработка события элементов гита
 sub.gitElements.addEventListener('click', addChild);
 
 
-draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, sub.canvas, ctx, activContainer);
+draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
