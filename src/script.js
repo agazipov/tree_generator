@@ -1,12 +1,11 @@
 import { draw } from "./draw.js";
-import { Container } from "./сlass.js";
+import { Container, GlobalState } from "./сlass.js";
 import {
     sortRecursion,
     serchChilds,
     delBranch,
     clearParentContainerForChild,
     serchParentIsBranch,
-    changeLevel,
     disableContainer,
     handleActivContainer,
     infoPanelFilling,
@@ -14,6 +13,7 @@ import {
 } from "./arrayFunction.js"
 import { nanoid } from "./nanoid.js";
 import { sub } from "./subscription.js";
+import { addChild } from "./listenrsCallback.js";
 
 sub.urlImputUser.value = 'agazipov'; // **
 sub.urlImputProject.value = 'react-2023-05-25'; // **
@@ -23,6 +23,7 @@ const rect = sub.rect();
 
 const initialContainer = new Container(1, '', 'initial', 'initial');
 const root = initialContainer.createRoot(rect.height, nanoid)
+const state = new GlobalState(root, initialContainer);
 
 const containers = [root];
 sub.titleInput.value = root.title;
@@ -37,31 +38,33 @@ let scaleModify = 1;
 sub.spanScale.innerText = scale;
 
 // переменные перемещения
+let isSwitch = false;
 let isDragging = false; // Флаг для отслеживания, идет ли перемещение полотна
 let startDragX = 0;
 let startDragY = 0;
 let offsetX = 0;
 let offsetY = 0;
 
-// добавить ребенка
-function addChild(event) {
-    if (!activContainer) {
-        console.log(`Нет активного контейнера`);
-        return;
-    };
-    let check = event.target.id === 'addChild' ? 'Name' : event.target.innerText;
-    const obj = initialContainer.createNewContainer(activContainer, check, nanoid);
-    containers.push(obj);
-    sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
-    infoPanelFilling(containers, sub, activContainer);
-}
+// // добавить ребенка
+// function addChild(event) {
+//     if (!state.activContainer) {
+//         console.log(`Нет активного контейнера`);
+//         return;
+//     };
+//     let check = event.target.id === 'addChild' ? 'Name' : event.target.innerText;
+//     const obj = initialContainer.createNewContainer(state.activContainer, check, nanoid);
+//     containers.push(obj);
+//     sortRecursion(root, containers);
+//     draw(null, state, sub, containers);
+//     infoPanelFilling(containers, sub, state.activContainer);
+// }
+
 // обработка клика кнопки add
-sub.buttonChild.addEventListener("click", addChild);
+sub.buttonChild.addEventListener("click", (event) => addChild(event, containers, sub, state));
 
 // удаление контейнера
 sub.buttonDelete.addEventListener("click", () => {
-    if (!activContainer) {
+    if (!state.activContainer) {
         console.log(`Нет активного контейнера`);
         return;
     };
@@ -69,32 +72,32 @@ sub.buttonDelete.addEventListener("click", () => {
         console.log(`Нельзя удалить рут`);
         return;
     };
-    delBranch(activContainer, containers);
-    clearParentContainerForChild(activContainer, containers);
-    handleActivContainer(null, containers, sub, activContainer);
+    delBranch(state.activContainer, containers);
+    clearParentContainerForChild(state.activContainer, containers);
+    state.activContainer = handleActivContainer(null, containers, sub, state.activContainer);
     serchParentIsBranch(null, containers);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub, containers);
 });
 
 // очистка
 sub.buttonClear.addEventListener("click", () => {
     containers.length = 1;
     containers[0].child.length = 0;
-    activContainer =  handleActivContainer(root, containers, sub, activContainer);
+    activContainer = handleActivContainer(root, containers, sub, activContainer);
     sub.titleInput.value = root;
     scale = 1;
     sub.spanScale.innerText = scale;
     const valueX = -offsetX, valueY = -offsetY;
     offsetX = 0;
     offsetY = 0;
-    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw({translateX: valueX, translateY: valueY}, state, sub, containers);
 });
 
 // редактирование
 sub.titleButton.addEventListener("click", () => {
     activContainer.title = sub.titleInput.value;
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub,  containers);
 });
 sub.accordionTextArea.addEventListener("change", (event) => {
     activContainer.description = event.target.value;
@@ -112,7 +115,7 @@ sub.increaseScale.addEventListener("click", () => {
     root.y = rect.height / 2 - 9;
     ctx.scale(scale, scale);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub, containers);
 });
 sub.decreaseScale.addEventListener("click", () => {
     // scale = 0.75;
@@ -125,12 +128,12 @@ sub.decreaseScale.addEventListener("click", () => {
     root.y = rect.height - 9;
     ctx.scale(scale, scale);
     sortRecursion(root, containers);
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub,  containers);
 });
 
 // смена родителя (принимает компонент на который перенесли)
 // свич
-let isSwitch = false;
+
 sub.buttonSwithParent.addEventListener("click", () => {
     isSwitch = !isSwitch;
     if (isSwitch) {
@@ -142,17 +145,17 @@ sub.buttonSwithParent.addEventListener("click", () => {
             container.isDisable = false;
         });
     };
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub,  containers);
 });
 
 
-activContainer = handleActivContainer(root, containers, sub, activContainer);
+state.activContainer = handleActivContainer(root, containers, sub, state.activContainer);
 
 sub.canvas.addEventListener("click", (event) => {
     const clickX = (event.clientX - rect.left) * scaleModify - offsetX;
     const clickY = (event.clientY - rect.top) * scaleModify - offsetY;
     // Проверяем объекты на пересечение с кликом
-    !isSwitch && handleActivContainer(null, containers, sub, activContainer); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
+    !isSwitch && (state.activContainer = handleActivContainer(null, containers, sub, state.activContainer)); // если не в режиме смены родителя, обнуляет активный контенер перед кликом
     if (!isSwitch) {
         serchParentIsBranch(null, containers);
         containers.forEach((object, _index, arr) => {
@@ -167,16 +170,17 @@ sub.canvas.addEventListener("click", (event) => {
                     (
                         object.isActiv = false,
                         sub.titleInput.value = '',
-                        sub.accordionTextArea.value = ''
+                        sub.accordionTextArea.value = '',
+                        state.activContainer = null
                     )
                     :
                     (
                         sub.titleInput.value = object.title,
                         sub.accordionTextArea.value = object.description,
                         serchParentIsBranch(object, arr),
-                        activContainer = handleActivContainer(object, containers, sub, activContainer)
+                        state.activContainer = handleActivContainer(object, containers, sub, state.activContainer)
                     );
-                console.log(`activContainer`, activContainer);
+                console.log(`activContainer`, state.activContainer);
             } else {
                 object.isActiv = false;
             }
@@ -199,7 +203,7 @@ sub.canvas.addEventListener("click", (event) => {
             }
         })
     }
-    draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw(null, state, sub,  containers);
 });
 
 // перемещение
@@ -218,7 +222,7 @@ sub.canvas.addEventListener('mousemove', (event) => {
         startDragY = event.clientY;
         offsetX += dx;
         offsetY += dy;
-        draw(dx, dy, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+        draw({translateX: dx, translateY: dy}, state, sub, containers);
     }
 });
 sub.canvas.addEventListener('mouseup', (event) => {
@@ -231,7 +235,7 @@ sub.center[0].addEventListener('click', () => {
     const valueX = -offsetX, valueY = -offsetY;
     offsetX = 0;
     offsetY = 0;
-    draw(valueX, valueY, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+    draw({translateX: valueX, translateY: valueY}, state, sub,  containers);
 });
 
 //репозиторий
@@ -265,7 +269,7 @@ sub.urlSelector.addEventListener('change', (event) => {
                 sub.gitElements.insertAdjacentElement('beforeEnd', newElement);
             });
             createTreeFromGit(data.tree, containers, initialContainer.createNewContainer, root);
-            draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+            draw(null, state, sub,  containers);
         })
 });
 
@@ -287,7 +291,7 @@ sub.file.addEventListener('change', (event) => {
         const parsedData = JSON.parse(contents);
 
         containers.push(...parsedData);
-        draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer)
+        draw(null, state, sub,  containers)
     };
 
     reader.readAsText(file);
@@ -318,7 +322,6 @@ export function createTreeFromGit(data, arr, callback, root) {
     sortRecursion(root, arr);
 };
 // обработка события элементов гита
-sub.gitElements.addEventListener('click', addChild);
+sub.gitElements.addEventListener('click', (event) => addChild(event, containers, sub, state));
 
-
-draw(null, null, offsetX, offsetY, scaleModify, root, containers, isSwitch, rect, ctx, activContainer);
+draw(null, state, sub, containers);

@@ -35,3 +35,14 @@ export class Container {
     };
 };
 
+export class GlobalState {
+    constructor(activContainer, initialContainer) {
+        this.initialContainer = initialContainer;
+        this.activContainer = activContainer;
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.scale = 1;
+        this.scaleModify = 1;
+        this.isSwitch = false
+    }
+}

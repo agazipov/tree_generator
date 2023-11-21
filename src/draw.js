@@ -1,17 +1,24 @@
 import { serchChilds } from "./arrayFunction.js"
 
 // функция рисования
-export function draw(x, y, offsetX, offsetY, scaleModify, root, arr, isSwitch, rect, ctx, activContainer) {
-    ctx.clearRect(0 - offsetX, 0 - offsetY, rect.width * scaleModify, rect.height * scaleModify); // Очищаем холст
-    (x || y) && ctx.translate(x, y);
+export function draw(translate, { ...globalState }, {...sub}, arr) {
+    const ctx = sub.ctx();
+    const rect = sub.rect();
+    ctx.clearRect(
+        0 - globalState.offsetX,
+        0 - globalState.offsetY,
+        rect.width * globalState.scaleModify,
+        rect.height * globalState.scaleModify
+    ); // Очищаем холст
+    translate && ctx.translate(translate.translateX, translate.translateY);
     // drawGrid(); // сетка
 
     // отрисовываем линии
-    serchChilds(root, drawLine, arr, ctx);
+    serchChilds(arr[0], drawLine, arr, ctx);
 
     arr.forEach(container => {
         // отрисовываем контейнеры
-        roundedRect(container, isSwitch, ctx, activContainer);
+        roundedRect(container, globalState.isSwitch, ctx, globalState.activContainer);
     });
 };
 

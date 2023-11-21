@@ -116,15 +116,16 @@ export function handleActivContainer(object, arr, sub, activContainer) {
     };
     if (object) {
         object.isActiv = true;
-        infoPanelFilling(arr, sub, activContainer, (object === null));
+        infoPanelFilling(arr, sub, activContainer);
         return object;
     };
-    infoPanelFilling(arr, sub, activContainer, (object === null));
+    infoPanelFilling(arr, sub, activContainer);
+    return object;
 };
 
 // вывод инфы об активном контенере 
-export function infoPanelFilling(arr, sub, activContainer, clear = false) {
-    if (clear) {
+export function infoPanelFilling(arr, sub, activContainer) {
+    if (!activContainer) {
         sub.titleInput.value = '';
         sub.elementInfo[0].innerHTML = '';
         return;
