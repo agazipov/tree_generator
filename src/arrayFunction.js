@@ -108,7 +108,7 @@ export function disableContainer(_parent, child) {
 }
 
 // назначение активного контейнера
-export function handleActivContainer(object, arr, sub, activContainer) {
+export function handleActivContainer(object, arr, sub) {
     if (object?.id === arr[0].id || object === null) {
         sub.buttonSwithParent.disabled = true;
     } else {
@@ -116,10 +116,7 @@ export function handleActivContainer(object, arr, sub, activContainer) {
     };
     if (object) {
         object.isActiv = true;
-        infoPanelFilling(arr, sub, activContainer);
-        return object;
-    };
-    infoPanelFilling(arr, sub, activContainer);
+    }
     return object;
 };
 
@@ -164,5 +161,31 @@ export function switchParent(object, arr, sub, root, activContainer, isSwitch) {
     serchChilds(object, changeLevel, arr); // меняем уровень у контенера и детей ** засунуть в сортировку
     sortRecursion(root, arr);  // сортировка
     serchParentIsBranch(activContainer, arr); // обнуляем путь у массива
-    infoPanelFilling(arr, sub,  activContainer, object);
+    infoPanelFilling(arr, sub, activContainer, object);
+};
+
+
+//переносим запрос в дерево
+export function createTreeFromGit(data, arr, addContainerFc, id) {
+    let node = {}; // записываем индекс в мейн массиве
+    data.forEach((element) => {
+        let path = element.path.split('/'); // разбивка пути на массив ['app','api']
+        // инициализация (когда родителя нет)
+        if (path.length === 1) {
+            const obj = addContainerFc(arr[0], element.path, id);
+            arr.push(obj);
+            node[element.path] = { index: arr.length - 1 }; // последний добавленый элемент
+            return;
+        };
+
+        const obj = addContainerFc(
+            arr[node[path[path.length - 2]].index],
+            path[path.length - 1],
+            id
+        ); // в парент передаем индекс родителя
+        // path[path.length - 2] предпоследний элемент указывает на родителя
+        arr.push(obj);
+        node[path[path.length - 1]] = { index: arr.length - 1 };
+    });
+    sortRecursion(arr[0], arr);
 };

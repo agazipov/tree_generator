@@ -10,8 +10,8 @@ export const sub = {
     // редактирование описания
     accordionTextArea: document.getElementById("accordionTextArea"),
     // масштаб
-    increaseScale: document.getElementById("increaseScale"),
-    decreaseScale: document.getElementById("decreaseScale"),
+    increaseScaleButton: document.getElementById("increaseScale"),
+    decreaseScaleButton: document.getElementById("decreaseScale"),
     spanScale: document.getElementById("spanScale"),
     // файлы
     saveButton: document.getElementById("saveButton"),

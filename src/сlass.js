@@ -39,6 +39,8 @@ export class GlobalState {
     constructor(activContainer, initialContainer) {
         this.initialContainer = initialContainer;
         this.activContainer = activContainer;
+        this.startDragX = 0;
+        this.startDragY = 0;
         this.offsetX = 0;
         this.offsetY = 0;
         this.scale = 1;
