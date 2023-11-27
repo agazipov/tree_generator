@@ -13,7 +13,7 @@ import {
     createTreeFromGit
 } from "./arrayFunction.js"
 import { nanoid } from "./nanoid.js";
-import { sub } from "./subscription.js";
+// import { sub } from "./subscription.js";
 
 // добавить ребенка
 export function addChild(event, arr, sub, state) {
@@ -21,7 +21,7 @@ export function addChild(event, arr, sub, state) {
         console.log(`Нет активного контейнера`);
         return;
     };
-    let check = event.target.id === 'addChild' ? 'Name' : event.target.innerText;
+    let check = event.target.id === 'addChild' ? 'Name' : event.target.innerText; // если кнопка - то "нейм", если репозиторий - то имя фйла
     const obj = state.initialContainer.createNewContainer(state.activContainer, check, nanoid);
     arr.push(obj);
     sortRecursion(arr[0], arr);
@@ -35,7 +35,7 @@ export function delContainer(arr, sub, state) {
         console.log(`Нет активного контейнера`);
         return;
     };
-    if (arr[0].child.length === 0) {
+    if (arr[0].id === state.activContainer.id) {
         console.log(`Нельзя удалить рут`);
         return;
     };
@@ -94,7 +94,7 @@ export function switchActivation(arr, sub, state) {
         sub.buttonSwithParent.textContent = 'Select Parent';
         serchChilds(state.activContainer, disableContainer, arr);
     } else {
-        sub.buttonSwithParent.textContent = 'Switch Parent';
+        sub.buttonSwithParent.textContent = 'Switch';
         arr.forEach((container) => {
             container.isDisable = false;
         });
@@ -148,16 +148,17 @@ export function canvasClick(event, arr, sub, state) {
                 clickY >= object.y &&
                 clickY <= object.y + object.height
             ) {
-                if (object.isDisable || object.id === activContainer.id || object.id === activContainer.parentId) {
+                if (object.isDisable || object.id === state.activContainer.id || object.id === state.activContainer.parentId) {
                     console.log(`dont pick`);
                     return;
                 } else {
                     serchParentIsBranch(null, arr); // ** дублирование
-                    switchParent(object, arr, sub, root, state.activContainer, state.isSwitch);
+                    switchParent(object, arr, sub, state);
                 }
             }
         })
     }
+    console.log(state);
     draw(null, state, sub, arr);
 }
 

@@ -1,5 +1,7 @@
-export const sub = {
+export const elements = {
     // управление
+    controlPanel: document.getElementsByClassName("controlPanel")[0],
+
     buttonChild: document.getElementById("addChild"),
     buttonSwithParent: document.getElementById("swithParent"),
     buttonDelete: document.getElementById("delContainer"),

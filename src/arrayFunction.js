@@ -152,16 +152,16 @@ export function infoPanelFilling(arr, sub, activContainer) {
     };
 };
 
-export function switchParent(object, arr, sub, root, activContainer, isSwitch) {
-    clearParentContainerForChild(activContainer, arr); // удаляем инфу о ребенке в родительском контейнере
-    activContainer.parentId = object.id; // назначаем выделенному контенеру контенер-родитель
-    object.child.push(activContainer.id); // добавляем контейнеру в дети активный контенер
-    sub.buttonSwithParent.textContent = 'Switch Parent';
-    isSwitch = !isSwitch;   // дизейбл функции кнопки для клика
+export function switchParent(object, arr, sub, state) {
+    clearParentContainerForChild(state.activContainer, arr); // удаляем инфу о ребенке в родительском контейнере
+    state.activContainer.parentId = object.id; // назначаем выделенному контенеру контенер-родитель
+    object.child.push(state.activContainer.id); // добавляем контейнеру в дети активный контенер
+    sub.buttonSwithParent.textContent = 'Switch';
+    state.isSwitch = !state.isSwitch;   // дизейбл функции кнопки для клика
     serchChilds(object, changeLevel, arr); // меняем уровень у контенера и детей ** засунуть в сортировку
-    sortRecursion(root, arr);  // сортировка
-    serchParentIsBranch(activContainer, arr); // обнуляем путь у массива
-    infoPanelFilling(arr, sub, activContainer, object);
+    sortRecursion(arr[0], arr);  // сортировка
+    serchParentIsBranch(state.activContainer, arr); // обнуляем путь у массива
+    infoPanelFilling(arr, sub, state.activContainer, object);
 };
 
 

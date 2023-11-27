@@ -5,84 +5,96 @@ import {
     infoPanelFilling,
 } from "./arrayFunction.js"
 import { nanoid } from "./nanoid.js";
-import { sub } from "./subscription.js";
+import { elements } from "./subscription.js";
 import { addChild, canvasClick, clearCanvas, delContainer, getRepoDirectory, getRepoFiles, loadProject, saveProject, scaleCanvas, switchActivation } from "./listenersCallback.js";
-// import { getRepoDirectory, getRepoFiles } from "./api.js";
 
-sub.urlImputUser.value = 'agazipov'; // **
-sub.urlImputProject.value = 'react-2023-05-25'; // **
+elements.controlPanel.onclick = (event) => {
+    switch (event.target.dataset.action) {
+        case "add":
+            addChild(event, containers, elements, state);
+            break;
+    
+        case "delete":
+            delContainer(containers, elements, state);
+            break;
+    
+        // case "switch":
+        //     switchActivation(containers, elements, state);
+        //     break;
+    
+        case "clear":
+            clearCanvas(containers, elements, state);
+            break;
+    
+        default:
+            break;
+    }
+}
 
-const ctx = sub.ctx();
-const rect = sub.rect();
+elements.urlImputUser.value = 'agazipov'; // **
+elements.urlImputProject.value = 'react-2023-05-25'; // **
+
+const rect = elements.rect();
 
 const initialContainer = new Container(1, '', 'initial', 'initial');
 const root = initialContainer.createRoot(rect.height, nanoid)
 const state = new GlobalState(root, initialContainer);
 
 const containers = [root];
-sub.titleInput.value = root.title;
-sub.accordionTextArea.value = root.description;
+elements.titleInput.value = root.title;
+elements.accordionTextArea.value = root.description;
 
-state.activContainer = handleActivContainer(root, containers, sub);
-infoPanelFilling(containers, sub, root);
+state.activContainer = handleActivContainer(root, containers, elements);
+infoPanelFilling(containers, elements, root);
 
-let activContainer = root; // ссылка на активный элемент в массиве
-let gitBlob = [];
-let gitTree = [];
+elements.spanScale.innerText = state.scale;
 
-// переменные масштабирования
-let scale = 1;
-let scaleModify = 1;
-sub.spanScale.innerText = scale;
-
-// переменные перемещения
-let isSwitch = false;
-let isDragging = false; // Флаг для отслеживания, идет ли перемещение полотна
-let startDragX = 0;
-let startDragY = 0;
-let offsetX = 0;
-let offsetY = 0;
+// --------------------------------------------------------------- //
 
 // обработка клика кнопки add
-sub.buttonChild.addEventListener("click", (event) => addChild(event, containers, sub, state));
+// elements.buttonChild.addEventListener("click", (event) => addChild(event, containers, elements, state));
+
 
 // удаление контейнера
-sub.buttonDelete.addEventListener("click", () => delContainer(containers, sub, state));
+// elements.buttonDelete.addEventListener("click", () => delContainer(containers, elements, state));
+
+// смена родителя (принимает компонент на который перенесли)
+// свич
+elements.buttonSwithParent.addEventListener("click", () => switchActivation(containers, elements, state));
 
 // очистка
-sub.buttonClear.addEventListener("click", () => clearCanvas(containers, sub, state));
+// elements.buttonClear.addEventListener("click", () => clearCanvas(containers, elements, state));
+
+// --------------------------------------------------------------- //
 
 // редактирование
-sub.titleButton.addEventListener("click", () => {
-    state.activContainer.title = sub.titleInput.value;
-    draw(null, state, sub, containers);
+elements.titleButton.addEventListener("click", () => {
+    state.activContainer.title = elements.titleInput.value;
+    draw(null, state, elements, containers);
 });
-sub.accordionTextArea.addEventListener("change", (event) => {
+elements.accordionTextArea.addEventListener("change", (event) => {
     state.activContainer.description = event.target.value;
 });
 
 // масштабирование ** не работает с перемещением
-sub.increaseScaleButton.addEventListener("click", () => scaleCanvas(true, containers, sub, state));
-sub.decreaseScaleButton.addEventListener("click", () => scaleCanvas(false, containers, sub, state));
+elements.increaseScaleButton.addEventListener("click", () => scaleCanvas(true, containers, elements, state));
+elements.decreaseScaleButton.addEventListener("click", () => scaleCanvas(false, containers, elements, state));
 
-// смена родителя (принимает компонент на который перенесли)
-// свич
-sub.buttonSwithParent.addEventListener("click", () => switchActivation(containers, sub, state));
 
 // клик по холсту
-sub.canvas.addEventListener("click", (event) => canvasClick(event, containers, sub, state));
+elements.canvas.addEventListener("click", (event) => canvasClick(event, containers, elements, state));
 
 // перемещение
-sub.canvas.addEventListener('mousedown', (event) => {
+elements.canvas.addEventListener('mousedown', (event) => {
     if (event.button === 2) { // Проверяем нажатие правой кнопки мыши
         state.startDragX = event.clientX;
         state.startDragY = event.clientY;
-        sub.canvas.addEventListener('mousemove', moveOnCanvas);
+        elements.canvas.addEventListener('mousemove', moveOnCanvas);
     }
 });
-sub.canvas.addEventListener('mouseup', (event) => {
+elements.canvas.addEventListener('mouseup', (event) => {
     if (event.button === 2) { // Проверяем отпускание правой кнопки мыши
-        sub.canvas.removeEventListener('mousemove', moveOnCanvas)
+        elements.canvas.removeEventListener('mousemove', moveOnCanvas)
     }
 });
 function moveOnCanvas(event) {
@@ -92,28 +104,28 @@ function moveOnCanvas(event) {
     state.startDragY = event.clientY;
     state.offsetX += dx;
     state.offsetY += dy;
-    draw({ translateX: dx, translateY: dy }, state, sub, containers);
+    draw({ translateX: dx, translateY: dy }, state, elements, containers);
 }
 
 //централизация
-sub.center[0].addEventListener('click', () => {
+elements.center[0].addEventListener('click', () => {
     const valueX = -state.offsetX, valueY = -state.offsetY;
     state.offsetY = 0;
     state.offsetX = 0;
-    draw({ translateX: valueX, translateY: valueY }, state, sub, containers);
+    draw({ translateX: valueX, translateY: valueY }, state, elements, containers);
 });
 
 //репозиторий
-sub.gitReq.addEventListener('click', () => getRepoDirectory(sub));
-sub.urlSelector.addEventListener('change', (event) => getRepoFiles(event , containers , sub, state, nanoid));
+elements.gitReq.addEventListener('click', () => getRepoDirectory(elements));
+elements.urlSelector.addEventListener('change', (event) => getRepoFiles(event, containers, elements, state, nanoid));
 
 
 // сейвинг загрузинг
-sub.saveButton.addEventListener('click', () => saveProject(containers));
-sub.file.addEventListener('change', (event) => loadProject(event, containers, sub, state));
+elements.saveButton.addEventListener('click', () => saveProject(containers));
+elements.file.addEventListener('change', (event) => loadProject(event, containers, elements, state));
 
 
 // обработка события элементов гита
-sub.gitElements.addEventListener('click', (event) => addChild(event, containers, sub, state));
+elements.gitElements.addEventListener('click', (event) => addChild(event, containers, elements, state));
 
-draw(null, state, sub, containers);
+draw(null, state, elements, containers);
